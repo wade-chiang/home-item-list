@@ -16,20 +16,21 @@
 
 ## P0 — 靜態 Prototype
 
-**不寫任何後端、不建專案骨架。** 單一 HTML、寫死假資料、發布成 Artifact 用手機開。
+**不寫任何後端、不碰 PocketBase、不建專案骨架。** 單一 HTML、寫死假資料、發布成 Artifact 用手機開。
 
-- [ ] **P0-1** 首頁草案 A（依緊急度分組）
-- [ ] **P0-2** 首頁草案 B（依位置分組）— 兩案並陳供比較
-- [ ] **P0-3** 物品列表
-- [ ] **P0-4** 物品詳情（含歷史時間軸與實際間隔回饋）
-- [ ] **P0-5** 新增表單（含花費收合、拍照按鈕位置、「不知道上次更換日」分支）
-- [ ] **P0-6** 打卡互動（一鍵 + 「已記錄 · 復原」提示）
-- [ ] **P0-7** 暫停流程（含預計恢復日必填）
-- [ ] **P0-8** 設定頁
+- [ ] **P0-1** 用 **Tailwind CDN 版**撰寫，版面要能直接搬進正式版
+- [ ] **P0-2** 首頁草案 A（依緊急度分組）
+- [ ] **P0-3** 首頁草案 B（依位置分組）— 兩案並陳供比較
+- [ ] **P0-4** 物品列表
+- [ ] **P0-5** 物品詳情（含歷史時間軸與實際間隔回饋）
+- [ ] **P0-6** 新增表單（含花費收合、拍照按鈕位置、「不知道上次更換日」分支）
+- [ ] **P0-7** 打卡互動（一鍵 + 「已記錄 · 復原」提示）
+- [ ] **P0-8** 暫停流程（含預計恢復日必填）
+- [ ] **P0-9** 設定頁
 
 **完成定義**：發布成 Artifact，使用者用手機實際點過，確認版面、觸控目標大小、資訊密度、流程順序。**首頁版型在此定案。**
 
-> ⚠️ P0 通過之前不進入 P1。
+> ⚠️ P0 通過之前不進入 P1。P0 完全不碰後端，所以 PocketBase 的試用實際上從 P1 才開始。
 
 ---
 
@@ -39,43 +40,50 @@
 
 ### 骨架
 
-- [ ] **P1-1** 專案初始化：Vite + React + TS 前端，Hono 後端，單一 repo
-- [ ] **P1-2** ESLint + Prettier + TypeScript 嚴格模式
-- [ ] **P1-3** Prisma + SQLite 接上，`data/app.db`
-- [ ] **P1-4** Dockerfile + docker-compose.yml（Hono 同時 serve 前端靜態檔，單一服務）
-  - 完成定義：`docker compose up` 後從手機瀏覽器可開啟
+- [ ] **P1-1** 前端初始化：Vite + React + TypeScript + Tailwind
+- [ ] **P1-2** ESLint + Prettier + TypeScript 嚴格模式 + Vitest
+- [ ] **P1-3** `.gitignore` 補上 `pb_data/`、`pb_public/`
+- [ ] **P1-4** docker-compose.yml：PocketBase 單一服務
+  - **版本 pin 死**，不用 `latest`
+  - `pb_data/` 掛 volume
+  - 前端 `vite build` 產物放進 `pb_public/`，由 PocketBase 一併 serve
+  - 完成定義：`docker compose up` 後從**手機瀏覽器**可開啟，且 React Router 的 pretty URL 直接輸入不會 404
 
 ### 資料層
 
-- [ ] **P1-5** `prisma/schema.prisma`：Category / Item / Log / Setting 四張表
-  - Purchase 與 Photo 留到 P2
-  - `householdId` 欄位一併建立（保留用）
-- [ ] **P1-6** `src/shared/due.ts`：`calcDue()`、`calcStatus()`、`resolveItemSettings()`
-  - 完成定義：**有單元測試**，涵蓋「沒有 Log 走 initialDue」「cycleDays 為 null 時往類別解析」「暫停優先於逾期」三種分支
-- [ ] **P1-7** `src/server/repo/`：Category / Item / Log 的 CRUD
-  - 完成定義：這是全專案唯一 import Prisma 的目錄
-
-### API
-
-- [ ] **P1-8** Category API
-- [ ] **P1-9** Item API（列表回傳時附上算好的 due 與 status）
-- [ ] **P1-10** Log API（建立 = 打卡，含刪除以支援「復原」）
+- [ ] **P1-5** 建立 collections：`categories` / `items` / `logs` / `purchases` / `settings`
+  - 日期欄位一律 `text`，不用 PB 的 `date` 型別
+  - `householdId` 一併建立（保留用）
+  - 完成定義：**`pb_migrations/` 進 git**
+- [ ] **P1-6** 實測並回填三個未確認事項
+  - 非必填欄位回傳 `null` 還是零值？→ 回填 `docs/PRODUCT.md` §2
+  - 新建 collection 的預設 API rule 是鎖住還是開放？→ 回填 CLAUDE.md
+  - `date` 欄位實際存成什麼格式？admin 後台用 UTC 還是瀏覽器本地時區顯示？
+  - 完成定義：文件裡的 ⚠️ 標記被實測結果取代，**並在此定案日期欄位用 `text` 還是 `date`**
+- [ ] **P1-7** `src/shared/types.ts`：領域型別（手寫）
+- [ ] **P1-8** `src/repo/`：PocketBase SDK 封裝 + zod 邊界驗證
+  - 負責把 PB 的空字串/零值轉成 `number | null`
+  - 完成定義：**這是全專案唯一 import PocketBase SDK 的目錄**
+- [ ] **P1-9** `src/shared/due.ts`：`calcDue()`、`calcStatus()`、`resolveItemSettings()`
+  - 完成定義：**有 Vitest 單元測試**，涵蓋「沒有 Log 走 initialDue」「cycleDays 未設定時往類別解析」「暫停優先於逾期」三種分支
 
 ### 前端
 
-- [ ] **P1-11** 路由骨架 + TanStack Query 設定
-- [ ] **P1-12** 首頁（P0 定案的版型）
-- [ ] **P1-13** 物品列表（篩選 + 排序）
-- [ ] **P1-14** 物品詳情（基本資訊 + 歷史時間軸）
-- [ ] **P1-15** 新增 / 編輯表單（含類別帶入預設值、「不知道上次更換日」分支）
-- [ ] **P1-16** 打卡互動（一鍵 + 復原）
-- [ ] **P1-17** 設定頁：全域提前提醒天數 + 類別管理
+- [ ] **P1-10** 路由骨架 + TanStack Query 設定
+- [ ] **P1-11** 首頁（P0 定案的版型，排序在前端做）
+- [ ] **P1-12** 物品列表（篩選 + 排序）
+- [ ] **P1-13** 物品詳情（基本資訊 + 歷史時間軸）
+- [ ] **P1-14** 新增 / 編輯表單（含類別帶入預設值、「不知道上次更換日」分支）
+- [ ] **P1-15** 打卡互動（一鍵 + 復原）
+- [ ] **P1-16** 設定頁：全域提前提醒天數 + 類別管理
 
 ### 收尾
 
-- [ ] **P1-18** 把家裡實際的耗材輸入進去
+- [ ] **P1-17** 把家裡實際的耗材輸入進去
   - 完成定義：**真的在用了**，不是 demo 資料
-- [ ] **P1-19** 補上 CLAUDE.md 的「指令」章節（dev / build / test / migrate / compose）
+- [ ] **P1-18** 補上 CLAUDE.md 的「指令」章節
+- [ ] **P1-19** **PocketBase 試用檢核** — 對照 CLAUDE.md 的四項退場條件逐條檢查，決定續用或換回自建後端
+  - 這是「先用它跑 P0/P1，不滿意再換」的正式決策點，不要跳過
 
 ---
 
@@ -83,15 +91,18 @@
 
 - [ ] **P2-1** 暫停功能：`paused` / `pausedUntil`，到期自動恢復
 - [ ] **P2-2** 首頁常駐「N 項已暫停」（不可收合）
-- [ ] **P2-3** Photo 資料表 + 上傳 API + `data/photos/` volume
-- [ ] **P2-4** 前端上傳前壓縮：長邊 1600px、轉 WebP、單張約 200KB
+- [ ] **P2-3** `items` 加上 `photos` file 欄位（Max Files 5）+ 前端上傳
+  - **不需要寫上傳 API、不需要管檔案路徑、不需要在應用層檢查張數**
+- [ ] **P2-4** 前端上傳前壓縮：長邊 1600px、**轉 JPEG**（品質約 0.8）
   - 完成定義：實測一張手機直拍照片，上傳後檔案小於 400KB
-- [ ] **P2-5** 每個 Item 最多 5 張的限制（應用層檢查 + UI 提示）
-- [ ] **P2-6** Purchase 資料表 + API，`Log.purchaseId` 關聯
+  - 格式必須是 JPEG，PocketBase 的縮圖對 WebP 只有部分支援
+- [ ] **P2-5** 列表與卡片用 PocketBase 的 on-demand 縮圖 URL，不要載原圖
+- [ ] **P2-6** `purchases` collection 啟用 + `logs.purchase` relation 接上
 - [ ] **P2-7** 打卡流程加入「☐ 這次有買新的」收合區塊
 - [ ] **P2-8** 新增表單的花費區塊（預設收合）
 - [ ] **P2-9** 實際間隔回饋（物品詳情頁，含「把週期改成 N 天」按鈕）
-- [ ] **P2-10** 資料匯出（JSON 或 SQLite 檔下載）
+- [ ] **P2-10** 備份：用 PocketBase 內建的備份 API 設定排程
+  - 完成定義：**實際還原過一次**，確認拿得回來
   - 理由：P3 要搬到手機上，先確保資料拿得出來
 
 ---
@@ -102,12 +113,12 @@
 
 - [ ] **P3-1** 導入 Capacitor，前端 build 產物打包成 Android app
   - 完成定義：**UI 程式碼零修改**就能跑起來。若需要改 UI，代表紀律被破壞了，先回頭修
-- [ ] **P3-2** repo 層換成裝置上的 SQLite（`@capacitor-community/sqlite`）
-- [ ] **P3-3** 相機外掛接上照片功能
+- [ ] **P3-2** `src/repo/` 從 PocketBase SDK 換成裝置上的 SQLite（`@capacitor-community/sqlite`）
+- [ ] **P3-3** 相機外掛接上照片功能，照片改存裝置檔案系統
 - [ ] **P3-4** 本地通知：每天排程檢查到期項目並發出通知
 - [ ] **P3-5** 通知點擊直接進入該物品
-- [ ] **P3-6** 從網頁版匯出、匯入到 app（用 P2-10 的匯出）
-- [ ] **P3-7** 決定網頁版何去何從（保留為備份介面 / 退役）
+- [ ] **P3-6** 從 PocketBase 匯出、匯入到 app
+- [ ] **P3-7** 決定 PocketBase 何去何從（保留為備份介面 / 退役）
 
 ---
 
@@ -116,7 +127,7 @@
 - [ ] **P4-1** 照片辨識：拍包裝袋 → 自動填入名稱與型號
   - 先查證模型選擇與實際單價，再開工
   - 辨識結果必須讓使用者確認後才套用，不直接寫入
-  - 需要 server 端代理端點（API key 不放裝置）
+  - **這是唯一需要自己寫伺服器程式碼的功能**（API key 不能放前端）：用 pb_hooks 或另起小代理
 - [ ] **P4-2** 成本統計：年度總額、依類別分析、單價趨勢
 - [ ] **P4-3** 常用耗材的「再買一次」捷徑（帶入上次的採購資訊）
 

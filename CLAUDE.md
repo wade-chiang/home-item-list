@@ -7,14 +7,26 @@
 
 ---
 
+## 這份文件怎麼維護
+
+**推導出決定、或發現文件裡既有的判斷有誤，要在當下就提案寫入，不要停在對話裡。** 提案內容包含放在哪一節、確切措辭。
+
+**提案是義務，寫不寫、怎麼寫由使用者決定。** 沒有明確同意的內容不進檔案。
+
+**推翻自己先前寫進文件的斷言時，修正提案要跟更正一起提出。** 文件裡留著一句錯的斷言，比完全沒有記錄更危險 —— 下一個 session 會照著它走，甚至重新反對一次已經推翻過的結論。
+
+*實例*：`date` 欄位那條原本寫成「不要用」的禁令，實際上是取捨。更正在對話中完成，但沒有立刻提案改文件，直到使用者問「有記錄嗎」才補上。
+
+---
+
 ## 明確不做
 
 這幾項討論過並且**刻意排除**。要重新納入請先跟使用者確認，不要因為「順手就做了」而加進來。
 
-- **庫存推算**（買了 3 捲、用掉 1 捲、還剩 2 捲）— Purchase 的 schema 有留下未來可算的空間，但不實作
+- **庫存推算**（買了 3 捲、用掉 1 捲、還剩 2 捲）— Purchase 的資料結構有留下未來可算的空間，但不實作
 - **季節性週期**（「每年 3 月和 9 月」）— 用「暫停」功能替代
 - **批次打卡**（一次換完五台冷氣）— 先觀察是否真的困擾
-- **多人共用與登入** — schema 保留 `household_id` 但不實作 auth
+- **多人共用與登入** — 資料保留 `householdId` 欄位但不實作 auth
 - **以圖搜圖** — 照片辨識只做「讀出包裝上的品牌型號」，不做反向圖片搜尋
 - **Telegram / Email / Web Push 推播** — 提醒改由 Capacitor 化後的本地通知負責
 
@@ -42,8 +54,10 @@
 | 層 | 選擇 |
 |---|---|
 | 前端 | Vite + React + TypeScript + React Router + TanStack Query |
-| 後端 | Hono + Prisma + SQLite |
-| 部署 | 單一 Docker container，Hono 同時 serve 前端 build 產物；docker compose 跑在家裡 |
+| 樣式 | Tailwind CSS |
+| 測試 | Vitest |
+| 後端 | **PocketBase（暫定，見決策紀錄）**，內嵌 SQLite |
+| 部署 | 單一 container。前端 build 產物放進 `pb_public/`，由 PocketBase 一併 serve |
 | 未來 app | Capacitor（Android/iOS），資料換成裝置上的 SQLite，提醒換成本地通知 |
 
 **新增任何依賴前先提出理由並等使用者確認**，不要自行安裝。
@@ -54,16 +68,15 @@
 
 ```
 src/
-  client/            前端。Vite entry，build 產物是純靜態
-  server/            Hono API
-    repo/            唯一允許 import Prisma 的地方
-  shared/            前後端共用的純函式與型別
+  repo/              唯一允許 import PocketBase SDK 的地方
+  shared/
     due.ts           到期與狀態計算（唯一實作）
-prisma/
-  schema.prisma
-data/                SQLite 檔與照片（掛成 docker volume）
-  app.db
-  photos/
+    types.ts         領域型別（手寫維護，見「型別要自己顧」）
+  pages/
+  components/
+pb_migrations/       PocketBase collection 定義（**進 git**）
+pb_public/           前端 build 產物（不進 git）
+pb_data/             PocketBase 資料與照片（volume，不進 git）
 docs/
 ```
 
@@ -73,21 +86,25 @@ docs/
 
 ### 1. 資料存取一律走 repo 層
 
-**`src/client/` 與 `src/server/` 的路由層不得 import Prisma。** 所有 DB 操作集中在 `src/server/repo/`。
+**`src/pages/`、`src/components/`、`src/shared/` 都不得 import PocketBase SDK。** 所有資料存取集中在 `src/repo/`。
 
-*為什麼*：未來 Capacitor 化時，資料會從「server 上的 SQLite」換成「裝置上的 SQLite」。只要 UI 沒有直接碰 Prisma，那次搬遷只需要換掉 repo 層的實作，**UI 一行都不用改**。這是我們選 Capacitor 而不是 Flutter 的整個理由，破壞這條紀律等於放棄那個好處。
+*為什麼*：未來 Capacitor 化時，資料會從「PocketBase 伺服器」換成「裝置上的 SQLite」。只要 UI 沒有直接碰 SDK，那次搬遷只需要換掉 `src/repo/` 的實作，**UI 一行都不用改**。這是我們選 Capacitor 而不是 Flutter 的整個理由，破壞這條紀律等於放棄那個好處。
+
+**這條紀律同時也是 PocketBase 的退場保險** —— 如果之後決定換掉 PocketBase，要重寫的一樣只有這個目錄。
 
 ### 2. 前端必須能純靜態運作
 
-前端不得依賴任何 server-only 行為（SSR、server component、server action）。`vite build` 的產物必須能被 Capacitor 直接打包並離線開啟。
+前端不得依賴任何 server-only 行為。`vite build` 的產物必須能被 Capacitor 直接打包並離線開啟。
 
 *為什麼*：同上。Capacitor 只吃靜態檔。
 
-### 3. 照片存檔案系統，DB 只存路徑
+### 3. PocketBase 的三個配套（不可省）
 
-照片檔放 `data/photos/`，DB 存相對路徑字串。**不要存 blob。**
+1. **版本 pin 死**。docker compose 指定確切版本，不用 `latest`，不自動升級
+2. **`pb_migrations/` 進 git**。collection 改動會自動產生 migration 檔，那是我們的 schema 唯一的版本化紀錄
+3. **repo 層邊界用 zod 驗證**。進出 `src/repo/` 的資料都要通過 schema 驗證再轉成 `src/shared/types.ts` 的領域型別
 
-*為什麼*：blob 會讓 SQLite 檔膨脹到難以備份，也讓未來搬到裝置上時無法沿用檔案系統的既有機制。
+*為什麼*：PocketBase 是 pre-1.0，官方明說「not recommended for production critical applications」，且 v0.23.0 曾是需要「一小時到一整個週末」才能升完的破壞性改版。前兩點讓我們不會被動被升級波及，第三點補回 ORM 產生型別所提供的安全網（見下方「型別要自己顧」）。
 
 ---
 
@@ -95,11 +112,32 @@ docs/
 
 這些是設計時想清楚才決定的，**不是隨手寫的**。改動前請先確認你理解為什麼。
 
-### 日期只存日期，不存時間戳
+### 日期只存日期（欄位型別暫定 `text`，P1-6 定案）
 
-所有日期欄位用 `YYYY-MM-DD` 字串，時區固定 `Asia/Taipei`。**不要用 `DateTime` 或 UTC 時間戳。**
+**不變的紀律**：`src/shared/` 與 UI 看到的日期永遠是 `YYYY-MM-DD` 字串，時區 `Asia/Taipei`。repo 層負責在邊界轉換。**這條跟欄位型別無關，不要一起推翻。**
 
-*為什麼*：「今天換的」是一個日期概念，不是一個瞬間。存 UTC 時間戳會讓晚上 8 點之後打卡的紀錄變成隔天（或前一天），使用者會看到明明今天換的卻顯示昨天。這種 bug 很難被發現，因為只在特定時段出現。
+*為什麼*：「今天換的」是一個日期概念，不是一個瞬間。把它當成瞬間處理，晚上打卡的紀錄就可能顯示成前一天或隔天——這種 bug 很難被發現，因為只在特定時段出現。領域層統一用純日期字串就完全繞開這件事。
+
+**欄位型別則是取捨，不是技術限制**（先前這裡寫成「不要用 `date`」的禁令，那是錯的）：
+
+- **`text`（目前採用）**：repo 層零轉換；P3 搬到裝置 SQLite 原樣搬。代價是 admin 後台要手打日期字串、PocketBase 不驗格式
+- **`date` + UTC 午夜約定（做法 A）**：存 `2026-09-10T00:00:00Z`，`toDomain` 只取前 10 個字元，`toRecord` 補上 `T00:00:00Z`。**完全不做時區加減。** 換到 admin 日期選擇器與格式驗證
+
+> ⚠️ **若改用 `date`，不要用「存台北午夜再 ±8」的做法（做法 B）。** 它結果相同但多一層算術，而且資料庫裡會存成 `2026-09-09T16:00:00Z` 來代表 9/10，未來在 admin 後台手動改資料時會對不上。
+
+**待 P1-6 實測後定案**：PocketBase `date` 欄位實際的儲存格式、以及 admin 後台是用 UTC 還是瀏覽器本地時區顯示（後者會影響「手動改資料」那條的權重）。
+
+例外：`created` / `updated` 這種系統時間戳用 PocketBase 的 `autodate`，它們不面向使用者。
+
+### 型別要自己顧：nullable 可能會變成零值
+
+PocketBase 沒有 ORM 產生的型別，`src/shared/types.ts` 是**手寫維護**的，schema 與型別之間沒有編譯器把關。這就是紀律 3 第三點存在的理由。
+
+而且有一個具體風險：
+
+> ⚠️ **待 P1 實測確認**：PocketBase 的非必填欄位可能回傳零值（number 回 `0`、text 回 `""`）而不是 `null`。若確認如此，`cycleDays` 與 `leadDays` 這類「`null` = 跟著類別走」的欄位**必須改用 `text` 型別，空字串代表 null**，由 repo 層轉換成 `number | null`。
+>
+> 特別注意 `leadDays`：`0`（到期當天才提醒）與 `null`（跟隨類別）是兩件不同的事，用 number 欄位會無法區分。
 
 ### 到期日是推導值，唯一實作在 `src/shared/due.ts`
 
@@ -108,9 +146,11 @@ due = 最後一筆 Log 的日期 + cycleDays
 若該物品完全沒有 Log（使用者選了「不知道上次更換日」）→ due = item.initialDue
 ```
 
-**不得把 due 存成資料庫欄位，不得在別的檔案重算一次。** 前端顯示、後端排序、未來的通知排程都必須呼叫同一支函式。
+**不得把 due 存成資料庫欄位，不得在別的檔案重算一次。** 前端顯示、排序、未來的本地通知排程都必須呼叫同一支函式。
 
 *為什麼*：這個值會出現在首頁、列表、詳情、通知四個地方。一旦有第二份實作，遲早會出現「首頁說逾期 3 天、詳情說還有 2 天」這種沒人信任得起來的畫面。
+
+補充：因為 due 是推導值，**排序必須在前端做**，不能靠 PocketBase 的 `sort` 參數。物品數量是幾十筆等級，全部撈回來排序完全沒問題。
 
 ### 下次到期用「設定週期」，不是「實際間隔」
 
@@ -122,12 +162,12 @@ due = 最後一筆 Log 的日期 + cycleDays
 
 ### 設定解析順序：物品 > 類別 > 全域
 
-`cycleDays`、`leadDays`、`unitPrice` 這幾個欄位在 Item 上是 **nullable**。
+`cycleDays`、`leadDays` 這些欄位在 Item 上可以是「未設定」。
 
-- **`null` 代表「跟著類別走」，不是 0、不是未設定。**
+- **「未設定」代表「跟著類別走」，不是 0。**
 - 讀取時一律走 `resolveItemSettings()`，不要在各處自己寫 `item.cycleDays ?? category.defaultCycleDays`。
 
-*為什麼*：如果改成填入實值，那使用者調整「冷氣濾網」類別的週期時，五台冷氣不會跟著變，他會認為系統壞了。`null` 是有意義的狀態。
+*為什麼*：如果改成填入實值，那使用者調整「冷氣濾網」類別的週期時，五台冷氣不會跟著變，他會認為系統壞了。「未設定」是有意義的狀態。
 
 ### 暫停會靜默失效，所以必須有防呆
 
@@ -138,11 +178,19 @@ due = 最後一筆 Log 的日期 + cycleDays
 1. 暫停時**必須**填 `pausedUntil`（預計恢復日），到日期自動恢復
 2. 首頁最下方**常駐**顯示「N 項已暫停」，讓它不會從視野裡消失
 
-### 照片上傳前先在瀏覽器端壓縮
+### 照片存 JPEG，不是 WebP
 
-縮到長邊 1600px、轉 WebP 再上傳。目標一張約 200KB。
+前端上傳前縮到長邊 1600px、**轉 JPEG**（品質約 0.8），目標一張約 200KB。
 
-*為什麼*：手機直拍是 3–5MB，一個物品五張就 25MB。這件事一開始不做，之後很難補 —— 舊照片都已經是原圖了。
+*為什麼*：手機直拍是 3–5MB，一個物品五張就 25MB，這件事一開始不做之後很難補。而**格式選 JPEG 而不是 WebP，是因為 PocketBase 的 on-demand 縮圖只支援 jpg / png / gif 與「部分」webp** —— 上傳 WebP 會讓我們用不到它的縮圖功能，那正是選 PocketBase 想省下的工作之一。
+
+照片用 PocketBase 的 `file` 欄位掛在 Item 上，`Max Files` 設 5。不需要自建 Photo 表，也不需要自己管檔案路徑。
+
+### PocketBase 的 API rules 與對外暴露
+
+> ⚠️ **待 P1 確認**：新建 collection 的 API rule 預設是鎖住還是開放，我沒有查證到。P1 建 collection 時實測並回填這一段。
+
+無論預設為何，**這台機器不可對外暴露**。目前沒有 auth，任何能連到區網的裝置都能讀寫全部資料。
 
 ### 新增物品時就寫入第一筆 Log
 
@@ -162,10 +210,28 @@ due = 最後一筆 Log 的日期 + cycleDays
 
 | 決定 | 理由 |
 |---|---|
-| **SQLite，不是 Postgres** | 單人使用沒有併發問題；備份就是複製一個檔案；schema 直接就是未來 app 版要用的 schema，不用轉換 |
+| **PocketBase（暫定，見下方退場條件）** | 這個專案的後端終將消失（P3 全部搬上裝置），所以「寫最少的鷹架」比「後端寫得漂亮」重要。PocketBase 讓後端程式碼接近零，還內建檔案上傳、on-demand 縮圖、admin 後台與備份 API |
+| **SQLite，不是 Postgres** | 單人使用沒有併發問題；備份就是複製一個目錄；資料結構直接就是未來 app 版要用的結構 |
 | **不用 Next.js** | 這個 app 用不到 SSR / RSC / SEO，而 Capacitor 需要純靜態前端會逼我們開 `output: 'export'`，把 Next.js 一半功能關掉，剩下的只是比較笨重的 React 路由器 |
-| **Capacitor，不是 React Native / Flutter** | 這個 app 是表單 + 清單 + 相機 + 本地通知，全在 Capacitor 舒適區。RN 要重寫 UI、Flutter 連 repo 層都要用 Dart 重寫。付出的重寫成本換來的原生手感在這個 app 上感覺不到 |
+| **Capacitor，不是 React Native / Flutter** | 這個 app 是表單 + 清單 + 相機 + 本地通知，全在 Capacitor 舒適區。RN 要重寫 UI、Flutter 連資料層都要用 Dart 重寫。付出的重寫成本換來的原生手感在這個 app 上感覺不到 |
 | **不做 Telegram 推播** | 最終形態是 app，本地通知不需要 HTTPS、不需要 server、不需要憑證，整個在手機裡。Web Push 則需要在家裡那台掛憑證，為一個過渡期功能付這個成本不划算 |
 | **金額記在 Purchase，不是 Log** | 一捲濾網 400 元可換五台冷氣。記在 Log 會逼使用者第一台記 400、後四台記 0，單次成本是假的。分開後成本統計從 Purchase 算，永遠正確 |
 | **類別是一對多，不是多對多的 tag** | tag 多對多時，兩個 tag 的提醒天數不同要聽誰的沒有好答案。改成一對多的類別後沒有衝突，而且類別能當設定範本用 |
 | **週期用天數，不用月** | 消耗品不在乎今天是幾號，只在乎裝上去多久了。天數是更誠實的模型，也不需要處理「1/31 加一個月是哪天」 |
+| **Tailwind CSS** | 手機優先的 responsive 寫起來最順，不用維護類名體系。P0 prototype 用 CDN 版寫，版面可以直接搬到正式版 |
+| **Vitest** | 與前端同一套工具鏈，`src/shared/due.ts` 的測試不需要額外配置 |
+
+### PocketBase 是暫定的：退場條件與成本
+
+這是「**先用它跑 P0/P1，不滿意再換**」的決定，不是定案。P0 完全不碰後端，所以實際的試用從 P1 才開始。
+
+**退場條件** —— 出現以下任一項就重新評估，不要靠模糊的不爽：
+
+1. collection 的 API rule / 權限模型擋住我們想做的事
+2. 手寫 TS 型別與 PocketBase schema drift 造成的 bug 反覆出現，zod 邊界擋不住
+3. 升級時遇到 v0.23 等級的破壞性改版
+4. 需要的查詢 PocketBase 做不到，被迫寫 pb_hooks
+
+**退場成本** —— 換回自建後端（Hono + Prisma + SQLite）需要：重寫 `src/repo/`、建後端專案、做一次性資料搬遷。
+
+**UI 不用動。** 這正是紀律 1 要保護的東西。

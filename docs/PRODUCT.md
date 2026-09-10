@@ -14,87 +14,83 @@
 
 ---
 
-## 2. 資料模型
+## 2. 資料模型（PocketBase collections）
 
-### Category 類別
+### 關於欄位型別的兩個通則
 
-物品的分類，**同時是設定範本**。新增物品時選了類別就自動帶入下面三個預設值，家裡五台冷氣的輸入成本因此大幅降低；之後要調整也是改類別就五台一起改。
+**日期欄位暫定用 `text`**，存 `YYYY-MM-DD` 純日期字串。這是取捨不是技術限制 —— `date` + UTC 午夜約定（做法 A）同樣可行，**待 P1-6 實測後定案**。無論選哪個，領域層看到的都是 `YYYY-MM-DD` 字串，repo 層負責轉換。詳見 CLAUDE.md「日期只存日期」。
 
-| 欄位 | 型別 | 說明 |
+**可為「未設定」的數值欄位也用 `text`，空字串代表未設定。** 理由見 CLAUDE.md「型別要自己顧」—— PocketBase 的非必填 `number` 欄位可能回傳 `0` 而非 `null`，而在這個 app 裡 `0` 和「未設定」是兩件不同的事。repo 層負責在邊界轉成 `number | null`。
+
+> ⚠️ 若 P1 實測發現 PocketBase 其實有回傳真正的 null，這些欄位可以簡化回 `number`。屆時記得回頭改這一段。
+
+### `categories` 類別
+
+物品的分類，**同時是設定範本**。新增物品時選了類別就自動帶入預設值，家裡五台冷氣的輸入成本因此大幅降低；之後要調整也是改類別就五台一起改。
+
+| 欄位 | PB 型別 | 說明 |
 |---|---|---|
-| `id` | string | |
-| `householdId` | string | 保留欄位，目前固定單一值 |
-| `name` | string | 例如「冷氣濾網」 |
-| `defaultCycleDays` | int? | 預設週期 |
-| `defaultLeadDays` | int? | 預設提前提醒天數 |
-| `defaultUnitPrice` | int? | 預設單價（元，整數） |
-| `defaultUnit` | string? | 預設單位，例如「捲」 |
-| `sortOrder` | int | |
+| `householdId` | text | 保留欄位，目前固定單一值 |
+| `name` | text (required) | 例如「冷氣濾網」 |
+| `defaultCycleDays` | text | 預設週期，空 = 未設定 |
+| `defaultLeadDays` | text | 預設提前提醒天數，空 = 未設定 |
+| `defaultUnitPrice` | text | 預設單價（元），空 = 未設定 |
+| `defaultUnit` | text | 預設單位，例如「捲」 |
+| `sortOrder` | number | |
 
-### Item 物品
+### `items` 物品
 
-| 欄位 | 型別 | 說明 |
+| 欄位 | PB 型別 | 說明 |
 |---|---|---|
-| `id` | string | |
-| `householdId` | string | 保留欄位 |
-| `categoryId` | string? | 可為未分類 |
-| `name` | string | 例如「主臥冷氣」 |
-| `location` | string | 例如「主臥」。**先用純字串**，不另建表 |
-| `cycleDays` | int? | **`null` = 跟著類別走** |
-| `leadDays` | int? | **`null` = 跟著類別走** |
-| `note` | string? | 例如「3M 淨呼吸 9808」 |
-| `initialDue` | date? | 只在該物品**完全沒有 Log** 時使用（見 §4.3） |
+| `householdId` | text | 保留欄位 |
+| `category` | relation → categories（單選、可空） | 可為未分類 |
+| `name` | text (required) | 例如「主臥冷氣」 |
+| `location` | text | 例如「主臥」。**先用純字串**，不另建 collection |
+| `cycleDays` | text | **空 = 跟著類別走** |
+| `leadDays` | text | **空 = 跟著類別走** |
+| `note` | text | 例如「3M 淨呼吸 9808」 |
+| `initialDue` | text | `YYYY-MM-DD`。只在該物品**完全沒有 Log** 時使用（見 §4.3） |
 | `paused` | bool | |
-| `pausedUntil` | date? | 暫停時**必填**，到期自動恢復 |
+| `pausedUntil` | text | `YYYY-MM-DD`。暫停時**必填**，到期自動恢復 |
+| `photos` | **file（Max Files 5）** | 直接用 PocketBase 的檔案欄位 |
 
-> `location` 用純字串而非獨立表格：家裡的房間就那幾個、不會有階層、不需要額外屬性。前端從既有資料撈出不重複值當下拉建議即可。要改成獨立表格是之後的事，成本很低。
+> `location` 用純字串而非獨立 collection：家裡的房間就那幾個、不會有階層、不需要額外屬性。前端從既有資料撈出不重複值當下拉建議即可。
 
-### Log 更換紀錄
+> `photos` 用 PocketBase 的 `file` 欄位，**不需要自建 Photo collection、不需要自己管檔案路徑、不需要寫上傳 API**。「最多 5 張」由 `Max Files` 選項強制，不用在應用層檢查。縮圖由 PocketBase on-demand 產生（所以上傳必須是 JPEG，見 CLAUDE.md）。
 
-| 欄位 | 型別 | 說明 |
+### `logs` 更換紀錄
+
+| 欄位 | PB 型別 | 說明 |
 |---|---|---|
-| `id` | string | |
-| `itemId` | string | |
-| `replacedOn` | date | 打卡日期，可回填 |
-| `note` | string? | |
-| `purchaseId` | string? | 這次用的是哪一筆採購的貨。**可留空 = 用既有存貨** |
+| `item` | relation → items (required) | |
+| `replacedOn` | text (required) | `YYYY-MM-DD`。打卡日期，可回填 |
+| `note` | text | |
+| `purchase` | relation → purchases（可空） | 這次用的是哪一筆採購的貨。**空 = 用既有存貨** |
 
 新增物品時就會產生第一筆 Log（除非選了「不知道上次更換日」）。
 
-### Purchase 採購紀錄
+### `purchases` 採購紀錄
 
 跟 Log 分開的理由：**一捲 400 元的濾網可以換四五台冷氣**。記在 Log 會逼使用者第一台記 400、後四台記 0，單次成本是假的。分開之後「今年在冷氣濾網上花了 1,200 元」永遠正確，跟換了幾次無關。
 
-| 欄位 | 型別 | 說明 |
+| 欄位 | PB 型別 | 說明 |
 |---|---|---|
-| `id` | string | |
-| `householdId` | string | 保留欄位 |
-| `categoryId` | string? | |
-| `name` | string? | 例如「3M 9808 一捲」 |
-| `purchasedOn` | date | |
-| `unitPrice` | int | 元，整數 |
-| `quantity` | int | |
-| `unit` | string | 「捲」「片」「個」 |
-| `note` | string? | |
+| `householdId` | text | 保留欄位 |
+| `category` | relation → categories（可空） | |
+| `name` | text | 例如「3M 9808 一捲」 |
+| `purchasedOn` | text (required) | `YYYY-MM-DD` |
+| `unitPrice` | number (required) | 元，整數 |
+| `quantity` | number (required) | |
+| `unit` | text | 「捲」「片」「個」 |
+| `note` | text | |
 
 總額 = `unitPrice × quantity`，**推導值不存欄位**。
 
-> 庫存（`quantity` 減掉關聯的 Log 數 = 還剩幾捲）**目前不做**，但這個 schema 讓它之後可以無痛加上。
+> 庫存（`quantity` 減掉關聯的 Log 數 = 還剩幾捲）**目前不做**，但這個結構讓它之後可以無痛加上。
 
-### Photo 照片
+### `settings` 全域設定
 
-| 欄位 | 型別 | 說明 |
-|---|---|---|
-| `id` | string | |
-| `itemId` | string | 目前只掛在 Item 上 |
-| `path` | string | 相對於 `data/photos/` |
-| `sortOrder` | int | |
-
-**每個 Item 最多 5 張**，在應用層檢查。採購收據照片之後有需要再加。
-
-### Setting 全域設定
-
-key-value 單表。目前只有 `defaultLeadDays`（全域預設提前提醒天數）。
+key-value 兩個 text 欄位。目前只有 `defaultLeadDays`（全域預設提前提醒天數）。
 
 ---
 
@@ -102,14 +98,18 @@ key-value 單表。目前只有 `defaultLeadDays`（全域預設提前提醒天�
 
 ```
 resolveItemSettings(item, category, settings) => {
-  cycleDays:  item.cycleDays ?? category?.defaultCycleDays ?? null,
-  leadDays:   item.leadDays  ?? category?.defaultLeadDays  ?? settings.defaultLeadDays,
+  cycleDays: item.cycleDays ?? category?.defaultCycleDays ?? null,
+  leadDays:  item.leadDays  ?? category?.defaultLeadDays  ?? settings.defaultLeadDays,
 }
 ```
 
-單價不走這條解析鏈 —— Item 上**沒有** `unitPrice` 欄位。價格屬於採購事件，不屬於物品；`category.defaultUnitPrice` 只在建立 Purchase 時當作表單預設值帶入，之後不再回頭影響任何東西。
+`null` 代表「跟著上一層走」，**不是 0、不是未設定**。
 
-`null` 代表「跟著上一層走」，**不是 0、不是未設定**。UI 上要把這件事講明白 —— 欄位留空時顯示灰字提示「跟隨類別：90 天」，而不是顯示空白讓人以為沒設。
+進到這支函式之前，repo 層已經把 PocketBase 的空字串轉成 `null` 了 —— 這是 repo 層邊界該做的事，不要讓空字串洩漏到 `src/shared/`。
+
+UI 上要把這件事講明白：欄位留空時顯示灰字提示「跟隨類別：90 天」，而不是顯示空白讓人以為沒設。
+
+單價不走這條解析鏈 —— Item 上**沒有** `unitPrice` 欄位。價格屬於採購事件，不屬於物品；`category.defaultUnitPrice` 只在建立 Purchase 時當作表單預設值帶入，之後不再回頭影響任何東西。
 
 ---
 
@@ -135,6 +135,8 @@ due = 最後一筆 Log 的 replacedOn + cycleDays
 | `ok` | 其他 | 中性色 |
 
 若 `cycleDays` 解析後仍是 `null`（類別也沒設）→ 狀態為 `ok`，不參與排序警示，UI 提示「尚未設定週期」。
+
+**排序在前端做。** due 是推導值，PocketBase 不知道它，所以不能用 API 的 `sort` 參數。物品是幾十筆等級，全部撈回來在前端排序完全沒問題。
 
 ### 4.3 沒有 Log 的物品
 
@@ -255,6 +257,8 @@ due = 最後一筆 Log 的 replacedOn + cycleDays
 2. **花費區塊預設收合** — 不是每次都想填，避免表單看起來很長
 3. **「不知道上次更換日」** — 選了就改問「下次大概什麼時候要換」，寫進 `initialDue`
 
+> 照片選取用 `<input type="file" accept="image/*" capture="environment">`，會直接開手機的相機 app。這個做法**不需要 HTTPS**，所以在區網的 `http://` 上也能用（`getUserMedia` 就不行）。
+
 ### 5.5 設定
 
 全域預設提前提醒天數、類別管理（新增/編輯類別與其範本值）、資料匯出。
@@ -274,7 +278,7 @@ due = 最後一筆 Log 的 replacedOn + cycleDays
 ```
 
 - **一鍵直接記今天**，不跳對話框
-- **可復原**，按錯救得回來
+- **可復原**，按錯救得回來（刪掉剛建立的 Log record）
 - 要改日期或補登：長按，或到物品詳情頁的歷史時間軸操作
 
 ### 6.2 打卡時順便記採購
@@ -309,7 +313,7 @@ due = 最後一筆 Log 的 replacedOn + cycleDays
 - 輸入：包裝袋照片
 - 輸出：建議的物品名稱、型號（填入備註）
 - 使用者可修改後才套用，不直接寫入
-- API key 只能放 server 端。Capacitor 化之後仍需要一個代理端點
+- API key 不能放前端。這是**唯一**需要自己寫伺服器程式碼的功能 —— PocketBase 可以用 pb_hooks，或另外起一個小代理
 
 ---
 
@@ -318,5 +322,8 @@ due = 最後一筆 Log 的 replacedOn + cycleDays
 | 項目 | 待何時決定 |
 |---|---|
 | 首頁版型（緊急度分組 vs 位置分組） | P0 prototype 用手機實測後 |
+| 日期欄位用 `text` 還是 `date` + UTC 午夜約定 | P1-6 實測後定案，回填 §2 與 CLAUDE.md |
+| PocketBase 非必填欄位是否回傳零值 | P1 建 collection 時實測，回填 §2 |
+| PocketBase collection 的預設 API rule | P1 實測，回填 CLAUDE.md |
 | 照片辨識的模型與實際單價 | 排到 P4 時查證 |
 | 採購收據照片要不要存 | 有實際需求時再說 |
