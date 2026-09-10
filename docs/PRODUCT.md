@@ -85,13 +85,12 @@
 | 欄位 | PB 型別 | 說明 |
 |---|---|---|
 | `householdId` | text | 保留欄位 |
-| `purchasedOn` | text (required) | `YYYY-MM-DD` |
 | `unitPrice` | number (required) | 元，整數 |
 | `quantity` | number (required) | |
 | `unit` | text | 「捲」「片」「個」 |
 | `note` | text | |
 
-採購紀錄**不存名稱與類別**，顯示時由建立它的那筆更換紀錄推導：`類別 · 品牌型號`；沒填品牌型號時只顯示類別。
+採購紀錄**不存名稱、類別與日期**，都由建立它的那筆更換紀錄推導：顯示為 `類別 · 品牌型號`，沒填品牌型號時只顯示類別；採購日期就是那筆更換紀錄的日期。
 
 總額 = `unitPrice × quantity`，**推導值不存欄位**。
 

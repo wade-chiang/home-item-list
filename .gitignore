@@ -34,3 +34,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 個人的 shell 與編輯器設定檔，不屬於專案。
+# 沙箱會把這些路徑掛成空檔，在沙箱內 git add 會被誤收（commit 55b93e1 就收進了 22 個空檔）。
+/.bash_profile
+/.bashrc
+/.profile
+/.zprofile
+/.zshrc
+/.gitconfig
+/.ripgreprc
+/.idea
+/.vscode
+# 刻意「不」排除 .claude/、.mcp.json、.gitmodules：專案之後可能真的需要放設定。
+# commit 時請明確指定檔案（例如 git add CLAUDE.md docs/），不要用 git add -A。
