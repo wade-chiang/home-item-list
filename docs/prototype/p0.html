@@ -1,0 +1,1380 @@
+<title>換了沒</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@1.44.0/dist/umd/lucide.min.js"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        ground:'var(--ground)', surface:'var(--surface)', 'surface-2':'var(--surface-2)',
+        ink:'var(--ink)', 'ink-2':'var(--ink-2)', 'ink-3':'var(--ink-3)',
+        line:'var(--line)', 'line-2':'var(--line-2)',
+        accent:'var(--accent)', 'accent-ink':'var(--accent-ink)', 'accent-soft':'var(--accent-soft)',
+        overdue:'var(--overdue)', 'overdue-soft':'var(--overdue-soft)',
+        soon:'var(--soon)', 'soon-soft':'var(--soon-soft)',
+        paused:'var(--paused)',
+      },
+      fontFamily: {
+        sans:['-apple-system','BlinkMacSystemFont','"PingFang TC"','"Noto Sans TC"','"Microsoft JhengHei"','sans-serif'],
+        mono:['"DM Mono"','ui-monospace','Menlo','"PingFang TC"','"Noto Sans TC"','monospace'],
+      },
+      boxShadow: { card:'var(--shadow)' },
+    }
+  }
+};
+</script>
+<style>
+/* 淺色：暖調中性色。主色維持深青，暖底配青色是互補，狀態色（磚紅、赭）壓深以確保當文字用時讀得清楚 */
+:root{
+  --ground:#F6F3EE; --surface:#FFFDF9; --surface-2:#FBF8F3;
+  --ink:#2B2520; --ink-2:#5F564F; --ink-3:#857B72;
+  --line:#E6DFD6; --line-2:#EFEAE3;
+  --accent:#0B5750; --accent-ink:#FFFFFF; --accent-soft:#E2EDE8;
+  --overdue:#B23A2E; --overdue-soft:#F7E4DF;
+  --soon:#8A5A0B; --soon-soft:#F5E8D0;
+  --paused:#A0968D;
+  --shadow:0 1px 2px rgba(43,37,32,.06), 0 6px 16px rgba(43,37,32,.05);
+  --scrim:rgba(30,24,18,.45);
+}
+/* 深色：使用者確認過 v1 可以，維持不動 */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1412; --surface:#18201D; --surface-2:#1E2724;
+    --ink:#E8ECE9; --ink-2:#AFBBB7; --ink-3:#85938E;
+    --line:#2A3430; --line-2:#222B28;
+    --accent:#43B3A6; --accent-ink:#08201D; --accent-soft:#12312D;
+    --overdue:#F2705F; --overdue-soft:#3A1F1B;
+    --soon:#D9A33A; --soon-soft:#332715;
+    --paused:#6E7B77;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 16px rgba(0,0,0,.3);
+    --scrim:rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1412; --surface:#18201D; --surface-2:#1E2724;
+  --ink:#E8ECE9; --ink-2:#AFBBB7; --ink-3:#85938E;
+  --line:#2A3430; --line-2:#222B28;
+  --accent:#43B3A6; --accent-ink:#08201D; --accent-soft:#12312D;
+  --overdue:#F2705F; --overdue-soft:#3A1F1B;
+  --soon:#D9A33A; --soon-soft:#332715;
+  --paused:#6E7B77;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 16px rgba(0,0,0,.3);
+  --scrim:rgba(0,0,0,.55);
+}
+body{
+  background:var(--ground); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.nowrap{white-space:nowrap}
+@keyframes up{from{transform:translateY(14px);opacity:.5} to{transform:none;opacity:1}}
+.anim-up{animation:up .22s cubic-bezier(.2,.8,.3,1)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+input[type="date"]{min-height:46px}
+textarea{resize:vertical}
+select option{color:#222}
+</style>
+
+<div class="relative mx-auto flex min-h-[100dvh] w-full max-w-[430px] flex-col bg-ground min-[460px]:border-x min-[460px]:border-line">
+  <header class="sticky top-0 z-20 flex items-center gap-2 border-b border-line bg-ground px-4 pb-2.5 pt-3.5">
+    <button id="back" hidden class="-ml-2 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-ink-2" aria-label="返回"></button>
+    <h1 id="title" class="min-w-0 flex-1 truncate text-[18px] font-semibold">換了沒</h1>
+    <button id="protoBtn" class="nowrap flex shrink-0 items-center gap-1.5 rounded-full border border-dashed border-ink-3 px-2.5 py-1 font-mono text-[11px] text-ink-3"></button>
+  </header>
+
+  <main id="main" class="flex-1 px-4 pb-44"></main>
+
+  <nav id="tabs" class="fixed inset-x-0 bottom-0 z-30 mx-auto flex w-full max-w-[430px] border-t border-line bg-surface pt-2" style="padding-bottom:max(8px, env(safe-area-inset-bottom))">
+    <button data-tab="home" class="flex flex-1 flex-col items-center gap-1 py-1 text-[11px]"></button>
+    <button data-tab="items" class="flex flex-1 flex-col items-center gap-1 py-1 text-[11px]"></button>
+    <button data-tab="settings" class="flex flex-1 flex-col items-center gap-1 py-1 text-[11px]"></button>
+  </nav>
+  <button id="fab" class="fixed z-30 grid h-14 w-14 place-items-center rounded-[18px] bg-accent text-accent-ink shadow-lg" style="right:max(16px, calc(50vw - 215px + 16px)); bottom:calc(78px + env(safe-area-inset-bottom))" aria-label="新增物品"></button>
+</div>
+
+<script>
+/* ================= Icons：Lucide 1.44.0 =================
+   名稱已對 cdn.jsdelivr.net 上的 lucide@1.44.0 逐一核對存在。
+   注意：Home、Trash2 是舊名稱的別名，這裡直接用新名稱 house、trash。 */
+const ICON = {
+  sofa:'sofa', utensils:'utensils', pot:'cooking-pot', bed:'bed-double', bedSingle:'bed-single',
+  blocks:'blocks', book:'book-open', bath:'bath', sun:'sun',
+  airvent:'air-vent', droplet:'droplets', box:'package', wind:'wind', fan:'fan', flame:'flame',
+  washer:'washing-machine',
+  plus:'plus', check:'check', x:'x', chevL:'chevron-left', chevR:'chevron-right', chevD:'chevron-down',
+  gear:'settings', home:'house', list:'list', camera:'camera', image:'image', pause:'pause', play:'play',
+  trash:'trash', pencil:'pencil', grip:'grip-vertical', moon:'moon', monitor:'monitor',
+  sliders:'sliders-horizontal', swap:'arrow-left-right',
+};
+/* 先輸出固定尺寸的 <i> 佔位，createIcons 會把它換成 <svg>。
+   元素上的 width / height / stroke-width 會被 Lucide 保留（它最後才合併元素屬性）。
+   若 Lucide 載入失敗，佔位仍保有尺寸，版面不會跑掉，只是看不到 icon。 */
+function ic(name, size=20, sw=1.75){
+  return `<i data-lucide="${ICON[name]||name}" width="${size}" height="${size}" stroke-width="${sw}" style="display:inline-block;width:${size}px;height:${size}px;flex:none"></i>`;
+}
+function hydrateIcons(root){
+  if(window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons({root: root || document});
+}
+
+/* ================= 日期工具 ================= */
+const DAY = 864e5;
+const today = new Date(); today.setHours(0,0,0,0);
+const addDays = (d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+const diffDays = (a,b)=>Math.round((a-b)/DAY);
+const iso = d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const md = d=>`${d.getMonth()+1}/${d.getDate()}`;
+const parseISO = s=>{ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); };
+const esc = s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nextMay = `${today.getFullYear()+1}-05-01`;
+
+/* ================= 假資料 ================= */
+const LOCS = [
+  {id:'lr', name:'客廳', icon:'sofa'},
+  {id:'dn', name:'餐廳', icon:'utensils'},
+  {id:'kt', name:'廚房', icon:'cooking-pot'},
+  {id:'mb', name:'主臥', icon:'bed-double'},
+  {id:'sb', name:'次臥', icon:'bed-single'},
+  {id:'kd', name:'小孩房', icon:'toy-brick'},
+  {id:'st', name:'書房', icon:'book-open'},
+  {id:'ba', name:'浴室', icon:'bath'},
+  {id:'bc', name:'陽台', icon:'sun'},
+];
+const CATS = [
+  {id:'ac', name:'冷氣濾網', icon:'air-vent'},
+  {id:'ft', name:'濾心', icon:'droplets'},
+  {id:'dh', name:'防潮盒', icon:'package'},
+  {id:'ap', name:'空清濾網', icon:'wind'},
+  {id:'dm', name:'除濕機濾網', icon:'fan'},
+  {id:'hd', name:'抽油煙機濾網', icon:'flame'},
+  {id:'wm', name:'洗衣機濾網', icon:'washing-machine'},
+];
+/* 精選 icon 清單（規格草稿 #11）。名稱已對 lucide@1.44.0 逐一核對；
+   filter、waves 是別名，這裡用實際名稱 funnel、waves-horizontal。 */
+const ROOM_ICONS = ['sofa','armchair','tv','lamp-floor','utensils','cooking-pot','chef-hat','refrigerator',
+  'bed-double','bed-single','baby','toy-brick','book-open','laptop','briefcase','bath','shower-head','toilet',
+  'washing-machine','shirt','sun','flower-2','sprout','car','warehouse','door-open','house','dumbbell','gamepad-2','cat'];
+const CAT_ICONS = ['air-vent','fan','wind','snowflake','sun-snow','thermometer','heater','droplet','droplets',
+  'glass-water','funnel','package','box','archive','flame','washing-machine','shower-head','battery','lightbulb',
+  'plug','zap','spray-can','sparkles','brush','trash','recycle','leaf','shield','waves-horizontal','coffee'];
+const loc = id=>LOCS.find(l=>l.id===id);
+const cat = id=>CATS.find(c=>c.id===id);
+
+/* 每筆更換紀錄帶自己的週期、品牌、型號（規格草稿 #3 #4）。logs 由新到舊。
+   left = 想呈現的剩餘天數，用來反推最近一次更換日，讓到期日永遠是算出來的 */
+function mk(id, locId, catId, o){
+  const first = o.unknown
+    ? {on:null, expectedDue:addDays(today,o.left), cycleDays:o.cycle, brand:o.brand||'', model:o.model||'', photos:0, purchase:null}
+    : {on:addDays(today,o.left-o.cycle), cycleDays:o.cycle, brand:o.brand||'', model:o.model||'', photos:o.lastPhotos||0, purchase:o.lastPurchase||null};
+  const logs = [first];
+  let cur = first.on;
+  (o.history||[]).forEach(h=>{
+    cur = addDays(cur,-h.gap);
+    logs.push({on:cur, cycleDays:h.cycle, brand:h.brand, model:h.model, photos:h.photos||0, purchase:h.purchase||null});
+  });
+  return {id, loc:locId, cat:catId, label:o.label||'', leadDays:o.lead??7, note:o.note||'',
+    photos:o.photos||0, paused:!!o.paused, pausedUntil:o.pausedUntil||null, logs};
+}
+const ITEMS = [
+  mk('lr-ac','lr','ac',{cycle:90,left:-12,brand:'3M',model:'淨呼吸 9808',photos:2,lastPhotos:1,
+    note:'機身型號 RAS-50NJ，濾網在上蓋掀開處',
+    history:[
+      {gap:112,cycle:90,brand:'3M',model:'淨呼吸 9808',photos:1,purchase:{unitPrice:400, qty:1, unit:'捲'}},
+      {gap:130,cycle:90,brand:'',model:'',purchase:{unitPrice:150, qty:1, unit:'片'}},
+      {gap:112,cycle:90,brand:'3M',model:'淨呼吸 9808',photos:1,purchase:{unitPrice:380, qty:1, unit:'捲'}},
+    ]}),
+  mk('lr-ap','lr','ap',{cycle:180,left:41,lead:14,brand:'Blueair',model:'205 替換濾網'}),
+  mk('dn-ac','dn','ac',{cycle:180,left:120,brand:'3M',model:'淨呼吸 9808',note:'餐廳冷氣很少開',
+    history:[{gap:176,cycle:180,brand:'3M',model:'淨呼吸 9808'}]}),
+  mk('kt-sink','kt','ft',{label:'水槽',cycle:180,left:-3,lead:14,brand:'3M',model:'SQC 快拆式'}),
+  mk('kt-pp','kt','ft',{label:'淨水器 PP',cycle:90,left:23,lead:14}),
+  mk('kt-hd','kt','hd',{cycle:60,left:19}),
+  mk('mb-ac','mb','ac',{cycle:60,left:38,brand:'3M',model:'淨呼吸 9808',note:'主臥冷氣天天開',
+    history:[
+      {gap:58,cycle:60,brand:'3M',model:'淨呼吸 9808'},
+      {gap:63,cycle:90,brand:'3M',model:'淨呼吸 9808'},
+    ]}),
+  mk('mb-dh','mb','dh',{label:'衣櫥',cycle:90,left:5,brand:'克潮靈',model:'除濕盒'}),
+  mk('mb-dm','mb','dm',{cycle:365,left:88,brand:'Panasonic',model:'F-Y22EN 濾網'}),
+  mk('sb-ac','sb','ac',{cycle:90,left:40,brand:'3M',model:'淨呼吸 9808',paused:true,pausedUntil:nextMay}),
+  mk('kd-ac','kd','ac',{cycle:90,left:52,brand:'3M',model:'淨呼吸 9808',paused:true,pausedUntil:nextMay}),
+  mk('st-ac','st','ac',{cycle:90,left:33,paused:true,pausedUntil:nextMay}),
+  mk('ba-ft','ba','ft',{label:'蓮蓬頭',unknown:true,cycle:180,left:102}),
+  mk('bc-wm','bc','wm',{cycle:30,left:12}),
+];
+// 每筆紀錄的建立順序（seq 越大越晚建立），用在同一天有多筆時決定先後（規格草稿 #14）
+ITEMS.forEach(it=>it.logs.forEach((l,k)=>{ l.seq = it.logs.length - k; }));
+const find = id=>ITEMS.find(i=>i.id===id);
+// 依日期由新到舊；日期未記錄的排最後；同一天較晚建立的在前
+const sortLogs = (a,b)=>((b.on?b.on.getTime():-1e15) - (a.on?a.on.getTime():-1e15)) || ((b.seq||0) - (a.seq||0));
+const nextSeq = it=>Math.max(0, ...it.logs.map(x=>x.seq||0)) + 1;
+/* 修改後的結果說明（規格草稿 #14）：最近一次換了哪一筆、到期日變成哪天。沒有變化就回空字串 */
+function outcomeText(it, before, self){
+  const now = it.logs[0], due = calcDue(it), parts = [];
+  if(before.latest !== now) parts.push(now===self ? '這筆現在是最近一次' : `${now.on?iso(now.on):'日期未記錄'} 那筆現在是最近一次`);
+  if(iso(before.due) !== iso(due)) parts.push(`到期日改為 ${md(due)}`);
+  return parts.join('，');
+}
+const purchaseText = pu=>pu ? `${pu.unitPrice} 元／${pu.unit||'個'}${pu.qty>1?` × ${pu.qty}`:''}` : '';
+
+/* ================= 到期與狀態 =================
+   due = 最近一筆紀錄的日期 + 該筆紀錄的週期；日期未記錄時用預計到期日 */
+function calcDue(it){ const l=it.logs[0]; return l.on ? addDays(l.on,l.cycleDays) : l.expectedDue; }
+function leftOf(it){ return diffDays(calcDue(it), today); }
+function calcStatus(it){
+  if(it.paused) return 'paused';
+  const left = leftOf(it);
+  if(left < 0) return 'overdue';
+  if(left <= it.leadDays) return 'soon';
+  return 'ok';
+}
+const fullName = it=>[loc(it.loc).name, cat(it.cat).name, it.label].filter(Boolean).join(' · ');
+const brandModel = lg=>[lg.brand,lg.model].filter(Boolean).join(' ');
+/* 沒填品牌型號時留空（規格草稿 #3）；列表第二行連前面的「·」一起拿掉，只剩週期 */
+const bmLine = lg=>{ const t = brandModel(lg); return t ? `${esc(t)} · ${lg.cycleDays} 天` : `${lg.cycleDays} 天`; };
+/* 型號變更判斷前先整理字串，避免 3M／3m、全半形、多餘空白被誤判 */
+const norm = t=>t.normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
+function daysText(it){
+  if(it.paused) return `暫停至 ${md(parseISO(it.pausedUntil))}`;
+  const l = leftOf(it);
+  return l<0 ? `逾期 ${-l} 天` : l===0 ? '今天到期' : `還有 ${l} 天`;
+}
+function shortDays(it){
+  if(it.paused) return '暫停';
+  const l = leftOf(it);
+  return l<0 ? `逾期 ${-l} 天` : `${l} 天`;
+}
+const STRIPE = {overdue:'var(--overdue)', soon:'var(--soon)', ok:'var(--line)', paused:'var(--paused)'};
+const STTEXT = {overdue:'var(--overdue)', soon:'var(--soon)', ok:'var(--ink-2)', paused:'var(--paused)'};
+const STLABEL = {overdue:'逾期', soon:'即將到期', ok:'正常', paused:'暫停中'};
+const BADGE = {overdue:'bg-overdue-soft text-overdue', soon:'bg-soon-soft text-soon', ok:'bg-line-2 text-ink-2', paused:'bg-line-2 text-paused'};
+
+/* ================= 狀態 ================= */
+const settings = {defaultLead:7};
+// showPrice 固定為 true：使用者決定保留價格記錄（規格草稿 #13），原型選單的開關已拿掉
+const view = {screen:'home', back:'home', detailId:'lr-ac', itemIcons:true, showPrice:true, homeFilter:null, theme:'system'};
+const PRE = [30,60,90,180,365];
+let F = freshForm();
+function freshForm(){
+  return {loc:'mb', cat:'ac', brand:'', model:'', label:'', labelOpen:false,
+    last:'today', lastDate:iso(today), nextDue:iso(addDays(today,60)),
+    cycle:'', custom:false, lead:String(settings.defaultLead), note:'', photo:false, recog:false,
+    costOpen:false, price:'', qty:'1', unit:'', err:'', itemPhotos:0};
+}
+const $ = id=>document.getElementById(id);
+
+/* ================= 共用樣式片段 ================= */
+const LBL = 'mb-1.5 block text-[13px] font-medium text-ink-2';
+const INP = 'w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-[15px] text-ink placeholder:text-ink-3 focus:border-accent focus:outline-none';
+const chip = (on, mono)=>`nowrap rounded-[10px] border px-3.5 py-2 text-[14px] ${mono?'font-mono tabular-nums':''} ${on?'border-ink bg-ink text-ground':'border-line bg-surface text-ink'}`;
+const sectDiv = t=>`<div class="mb-2.5 mt-6 flex items-center gap-2.5"><h2 class="nowrap text-[13px] font-semibold tracking-wide text-ink-2">${t}</h2><span class="h-px flex-1 bg-line"></span></div>`;
+const kv = (k,v,hint)=>`<div class="flex justify-between gap-4 border-t border-line-2 py-2.5 first:border-t-0">
+  <span class="nowrap shrink-0 text-[13.5px] text-ink-3">${k}</span>
+  <span class="text-right text-[14px]">${v}${hint?`<span class="block font-mono text-[11.5px] text-ink-3">${hint}</span>`:''}</span></div>`;
+const tile = name=>`<span class="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-line-2 text-ink-2">${ic(name,19)}</span>`;
+
+/* ================= 首頁：依位置分組 ================= */
+function homeRow(it, i){
+  const st = calcStatus(it), lg = it.logs[0], urgent = st==='overdue' || st==='soon';
+  return `<div class="flex items-center gap-3 px-3 py-3 ${i?'border-t border-line-2':''}">
+    <span class="w-[3px] self-stretch rounded-full" style="background:${STRIPE[st]}"></span>
+    ${view.itemIcons ? tile(cat(it.cat).icon) : ''}
+    <button data-open="${it.id}" class="min-w-0 flex-1 text-left">
+      <span class="block text-[15.5px] font-medium leading-snug">${esc(cat(it.cat).name)}${it.label?`<span class="font-normal text-ink-3"> · ${esc(it.label)}</span>`:''}</span>
+      <span class="mt-0.5 block truncate text-[12.5px] text-ink-3">${bmLine(lg)}</span>
+      <span class="nowrap mt-1 block font-mono text-[14.5px] font-medium tabular-nums" style="color:${STTEXT[st]}">${daysText(it)}</span>
+    </button>
+    <button data-done="${it.id}" class="nowrap shrink-0 self-center rounded-[10px] px-3.5 py-2.5 text-[14px] font-medium ${urgent?'bg-accent text-accent-ink':'bg-accent-soft text-accent'}">換好了</button>
+  </div>`;
+}
+function statTile(n, label, st){
+  const bg = {overdue:'bg-overdue-soft', soon:'bg-soon-soft', ok:'bg-line-2'}[st];
+  const col = {overdue:'text-overdue', soon:'text-soon', ok:'text-ink-2'}[st];
+  const active = view.homeFilter===st, dim = view.homeFilter && !active;
+  // 數量 0 的方塊不能點；篩選中被選的加框線，其他變淡
+  return `<button data-hfilter="${st}" ${n?'':'disabled'} aria-pressed="${active}"
+    class="rounded-xl px-3 py-2.5 text-left transition-opacity ${bg} ${col} ${active?'ring-2 ring-inset ring-current':''} ${dim?'opacity-40':''} disabled:cursor-default">
+    <div class="font-mono text-[22px] font-medium leading-none tabular-nums">${n}</div>
+    <div class="nowrap mt-1.5 text-[12px]">${label}</div></button>`;
+}
+function renderHome(){
+  const act = ITEMS.filter(i=>!i.paused), paused = ITEMS.filter(i=>i.paused);
+  const count = s=>act.filter(i=>calcStatus(i)===s).length;
+  // 篩選中的狀態數量歸零（例如剛把最後一個逾期的換好）就自動取消篩選
+  if(view.homeFilter && count(view.homeFilter)===0) view.homeFilter = null;
+  const shown = view.homeFilter ? act.filter(i=>calcStatus(i)===view.homeFilter) : act;
+  let groups = LOCS.map(l=>({l, items:shown.filter(i=>i.loc===l.id).sort((a,b)=>leftOf(a)-leftOf(b))}))
+                   .filter(g=>g.items.length);
+  // 固定順序；有逾期物品的位置暫時置頂（規格草稿 #8，看完原型再確認）
+  const hot = g=>g.items.some(i=>calcStatus(i)==='overdue');
+  groups = [...groups.filter(hot), ...groups.filter(g=>!hot(g))];
+
+  let h = `<div class="grid grid-cols-3 gap-2 pt-4">
+    ${statTile(count('overdue'),'逾期','overdue')}${statTile(count('soon'),'即將到期','soon')}${statTile(count('ok'),'正常','ok')}
+  </div>`;
+  groups.forEach(g=>{
+    h += `<section>
+      <div class="mb-2.5 mt-7 flex items-center gap-2.5">
+        <span class="text-ink">${ic(g.l.icon,23)}</span>
+        <h2 class="nowrap text-[20px] font-semibold tracking-wide">${esc(g.l.name)}</h2>
+        <span class="font-mono text-[12.5px] text-ink-3">${g.items.length}</span>
+        ${hot(g)?`<span class="nowrap rounded-md bg-overdue-soft px-1.5 py-0.5 text-[11px] font-medium text-overdue">有逾期</span>`:''}
+        <span class="h-px flex-1 bg-line"></span>
+      </div>
+      <div class="overflow-hidden rounded-2xl bg-surface shadow-card">${g.items.map(homeRow).join('')}</div>
+    </section>`;
+  });
+  h += `<button data-goto="items" class="mt-7 flex w-full items-center gap-3 rounded-xl border border-line bg-surface-2 px-3.5 py-3 text-left">
+    <span class="text-paused">${ic('pause',17)}</span>
+    <span class="min-w-0 flex-1 text-[14px] text-ink-2">${paused.length} 項已暫停<span class="text-ink-3"> · ${paused.map(i=>loc(i.loc).name).join('、')}</span></span>
+    <span class="text-ink-3">${ic('chevR',16)}</span>
+  </button>
+  <p class="mt-5 rounded-xl border border-dashed border-line px-3.5 py-3 text-[12px] leading-relaxed text-ink-3">
+    <b class="text-ink-2">這是原型。</b>資料是假的、不會存。到期日用「最近一次更換日 ＋ 那次的週期」即時計算，按「換好了」會真的重算。</p>`;
+  return h;
+}
+
+/* ================= 物品頁：依類別分組 ================= */
+function itemRow(it, i){
+  const st = calcStatus(it), lg = it.logs[0], L = loc(it.loc);
+  return `<button data-open="${it.id}" class="flex w-full items-center gap-3 px-3 py-3 text-left ${i?'border-t border-line-2':''}">
+    <span class="w-[3px] self-stretch rounded-full" style="background:${STRIPE[st]}"></span>
+    <span class="min-w-0 flex-1">
+      <span class="flex items-center gap-1.5 text-[15px] font-medium">
+        ${view.itemIcons?`<span class="text-ink-3">${ic(L.icon,15)}</span>`:''}
+        <span class="nowrap">${esc(L.name)}</span>${it.label?`<span class="truncate font-normal text-ink-3">· ${esc(it.label)}</span>`:''}
+      </span>
+      <span class="mt-0.5 block truncate text-[12.5px] text-ink-3">${bmLine(lg)}</span>
+    </span>
+    <span class="nowrap shrink-0 font-mono text-[13.5px] tabular-nums" style="color:${STTEXT[st]}">${shortDays(it)}</span>
+    <span class="shrink-0 text-ink-3">${ic('chevR',16)}</span>
+  </button>`;
+}
+function renderItems(){
+  let h = `<div class="flex items-baseline justify-between pt-4">
+    <span class="text-[13px] text-ink-3">${ITEMS.length} 項 · ${ITEMS.filter(i=>i.paused).length} 項暫停</span>
+    <span class="text-[12px] text-ink-3">依類別分組</span></div>`;
+  CATS.forEach(c=>{
+    const list = ITEMS.filter(i=>i.cat===c.id).sort((a,b)=>(a.paused-b.paused) || (leftOf(a)-leftOf(b)));
+    if(!list.length) return;
+    h += `<section>
+      <div class="mb-2 mt-6 flex items-center gap-2.5">
+        <span class="text-ink">${ic(c.icon,20)}</span>
+        <h2 class="nowrap text-[17px] font-semibold">${esc(c.name)}</h2>
+        <span class="font-mono text-[12px] text-ink-3">${list.length}</span>
+        <span class="h-px flex-1 bg-line"></span>
+      </div>
+      <div class="overflow-hidden rounded-2xl bg-surface shadow-card">${list.map(itemRow).join('')}</div>
+    </section>`;
+  });
+  return h;
+}
+
+/* ================= 詳情 ================= */
+function renderDetail(){
+  const it = find(view.detailId), st = calcStatus(it), lg = it.logs[0], due = calcDue(it), l = leftOf(it);
+  const dated = it.logs.filter(x=>x.on);
+  const gaps = [];
+  for(let k=0; k<dated.length-1; k++) gaps.push(diffDays(dated[k].on, dated[k+1].on));
+  const avg = gaps.length>=2 ? Math.round(gaps.reduce((a,b)=>a+b,0)/gaps.length) : null;
+  const suggest = avg ? Math.round(avg/10)*10 : null;
+
+  let h = `<div class="mt-4 flex items-start gap-4 rounded-2xl bg-surface p-4 shadow-card">
+    <div class="min-w-[76px]">
+      <div class="font-mono text-[34px] font-medium leading-none tabular-nums" style="color:${st==='ok'?'var(--ink)':STTEXT[st]}">${it.paused?'—':Math.abs(l)}</div>
+      <div class="nowrap mt-1.5 font-mono text-[12px] text-ink-3">${it.paused?'已暫停':l<0?'天前該換':l===0?'今天到期':'天後到期'}</div>
+    </div>
+    <div class="flex-1">
+      <span class="nowrap rounded-md px-2 py-0.5 font-mono text-[11.5px] ${BADGE[st]}">${STLABEL[st]}</span>
+      <div class="mt-2 font-mono text-[12.5px] leading-relaxed text-ink-3">
+        ${iso(due)} 到期<br>${lg.on?`上次更換 ${iso(lg.on)}`:'上次更換日期未記錄'}
+        ${it.paused?`<br>預計 ${it.pausedUntil} 恢復`:''}
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-3 rounded-2xl bg-surface px-4 py-1 shadow-card">
+    ${brandModel(lg) ? kv('目前型號', esc(brandModel(lg)), '取自最近一次更換') : ''}
+    ${kv('目前週期', `${lg.cycleDays} 天`, '取自最近一次更換')}
+    ${kv('提前提醒', `${it.leadDays} 天`)}
+    ${kv('位置', esc(loc(it.loc).name))}
+    ${kv('類別', esc(cat(it.cat).name))}
+    ${it.label?kv('補充名稱', esc(it.label)):''}
+    ${it.note?kv('備註', esc(it.note)):''}
+  </div>`;
+
+  if(avg && Math.abs(avg-lg.cycleDays)>=10){
+    h += `<div class="mt-3 rounded-2xl bg-accent-soft px-4 py-3.5">
+      <p class="text-[14px] leading-relaxed">目前週期 <b>${lg.cycleDays} 天</b>，實際平均 <b>${avg} 天</b>換一次。</p>
+      <p class="mt-0.5 font-mono text-[12px] text-ink-2">近 ${gaps.length} 次間隔：${gaps.join(' / ')} 天</p>
+      <button data-adjust="${suggest}" class="mt-3 rounded-lg border border-accent bg-surface px-3 py-2 text-[13.5px] font-medium text-accent">把目前週期改成 ${suggest} 天</button>
+      <p class="mt-2 text-[12px] text-ink-3">會同時更新這一次的到期日，過去的紀錄不變。</p>
+    </div>`;
+  }
+
+  h += `<div class="mt-3 rounded-2xl bg-surface px-4 py-3.5 shadow-card">
+    <div class="flex items-baseline justify-between gap-3">
+      <h3 class="nowrap text-[13px] font-semibold text-ink-2">物品照片</h3>
+      <span class="text-[11.5px] text-ink-3">機身、型號貼紙 · 最多 5 張</span>
+    </div>
+    <div class="mt-2.5 flex flex-wrap gap-2">
+      ${Array.from({length:it.photos},()=>`<button data-photo-view="${it.id}" aria-label="檢視照片" class="grid h-16 w-16 place-items-center rounded-xl border border-line bg-line-2 text-ink-3">${ic('image',20)}</button>`).join('')}
+      ${it.photos<5?`<button data-photo-add="${it.id}" aria-label="新增照片" class="grid h-16 w-16 place-items-center rounded-xl border border-dashed border-line text-ink-3">${ic('plus',20)}</button>`:''}
+    </div>
+  </div>
+
+  <div class="mt-3 rounded-2xl bg-surface px-4 pb-1 pt-3.5 shadow-card">
+    <h3 class="text-[13px] font-semibold text-ink-2">更換歷史</h3>
+    <p class="mt-0.5 text-[12px] text-ink-3">點一筆可以編輯、補上品牌型號或刪除</p>
+    <ol class="mt-1">
+      ${it.logs.map((x,k)=>{
+        const older = it.logs[k+1];
+        const gap = (x.on && older && older.on) ? diffDays(x.on, older.on) : null;
+        const modelChanged = older && norm(brandModel(x))!==norm(brandModel(older));
+        const cycleChanged = older && x.cycleDays!==older.cycleDays;
+        return `<li class="border-t border-line-2 first:border-t-0"><button data-edit-log="${k}" class="flex w-full items-start gap-2 py-3 text-left"><div class="min-w-0 flex-1">
+          <div class="flex items-baseline justify-between gap-3">
+            <span class="nowrap font-mono text-[13.5px] tabular-nums">${x.on?iso(x.on):'日期未記錄'}</span>
+            <span class="nowrap font-mono text-[12px] text-ink-3">${gap!=null?`隔 ${gap} 天`:(k===it.logs.length-1?'第一筆':'')}</span>
+          </div>
+          <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px]">
+            ${brandModel(x)
+              ? `<span>${esc(brandModel(x))}</span><span class="nowrap text-ink-3">· ${x.cycleDays} 天</span>`
+              : `<span class="nowrap text-ink-3">${x.cycleDays} 天</span>`}
+            ${modelChanged?`<span class="nowrap inline-flex items-center gap-1 rounded bg-soon-soft px-1.5 py-0.5 text-[11px] text-soon">${ic('swap',12,2)}型號變更</span>`:''}
+            ${cycleChanged?`<span class="nowrap rounded bg-soon-soft px-1.5 py-0.5 text-[11px] text-soon">週期 ${older.cycleDays} → ${x.cycleDays}</span>`:''}
+          </div>
+          ${(x.photos || (view.showPrice && x.purchase) || (!x.on && x.expectedDue))?`<div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-ink-3">
+            ${x.photos?`<span class="nowrap inline-flex items-center gap-1">${ic('camera',13)}耗材照片 ${x.photos} 張</span>`:''}
+            ${(view.showPrice && x.purchase)?`<span class="nowrap font-mono">${esc(purchaseText(x.purchase))}</span>`:''}
+            ${(!x.on && x.expectedDue)?`<span class="nowrap">新增時預計 ${iso(x.expectedDue)} 到期</span>`:''}
+          </div>`:''}
+        </div><span class="mt-0.5 shrink-0 text-ink-3">${ic('chevR',16)}</span></button></li>`;
+      }).join('')}
+    </ol>
+  </div>
+
+  <div class="mt-4 grid grid-cols-3 gap-2">
+    <button data-done="${it.id}" class="col-span-3 rounded-xl bg-accent py-3.5 text-[15.5px] font-semibold text-accent-ink">換好了</button>
+    <button id="pauseBtn" class="flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface py-3 text-[14px]">${ic(it.paused?'play':'pause',16)}${it.paused?'恢復':'暫停'}</button>
+    <button data-edit-item="${it.id}" class="flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface py-3 text-[14px]">${ic('pencil',16)}編輯</button>
+    <button data-del-item="${it.id}" class="flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface py-3 text-[14px] text-overdue">${ic('trash',16)}刪除</button>
+  </div>`;
+  return h;
+}
+
+/* ================= 新增表單 ================= */
+function selectHTML(field, list, val, attr='f'){
+  return `<div class="relative">
+    <select data-${attr}="${field}" class="${INP} appearance-none pr-9">
+      ${list.map(o=>`<option value="${o.id}" ${o.id===val?'selected':''}>${esc(o.name)}</option>`).join('')}
+    </select>
+    <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-3">${ic('chevD',16)}</span>
+  </div>`;
+}
+function renderAdd(){
+  const dup = ITEMS.some(i=>i.loc===F.loc && i.cat===F.cat);
+  const labelOpen = F.labelOpen || dup;
+  const preview = [loc(F.loc).name, cat(F.cat).name, F.label.trim()].filter(Boolean).join(' · ');
+  return `
+  <button data-add-shoot class="mt-4 flex w-full flex-col items-center gap-1 rounded-2xl border-[1.5px] border-dashed border-accent bg-accent-soft px-4 py-4 text-accent">
+    <span class="flex items-center gap-2 text-[15.5px] font-medium">${ic('camera',20)}${F.photo?'已拍耗材包裝 · 重拍':'拍耗材包裝'}</span>
+    <span class="text-[12px]">自動填入品牌與型號</span>
+  </button>
+
+  <div class="mt-5 grid grid-cols-2 gap-2.5">
+    <div><label class="${LBL}">位置</label>${selectHTML('loc',LOCS,F.loc)}</div>
+    <div><label class="${LBL}">類別</label>${selectHTML('cat',CATS,F.cat)}</div>
+  </div>
+  <p class="mt-2 text-[12.5px] text-ink-3">會顯示為 <span class="font-medium text-ink">${esc(preview)}</span></p>
+
+  <div class="mt-4 grid grid-cols-2 gap-2.5">
+    <div><label class="${LBL}">品牌 <span class="font-normal text-ink-3">選填</span></label>
+      <input data-f="brand" value="${esc(F.brand)}" placeholder="例如 3M" class="${INP}"></div>
+    <div><label class="${LBL}">型號 <span class="font-normal text-ink-3">選填</span></label>
+      <input data-f="model" value="${esc(F.model)}" placeholder="例如 9808" class="${INP}"></div>
+  </div>
+  <p class="mt-1.5 font-mono text-[11.5px] ${F.recog?'text-accent':'text-ink-3'}">${F.recog?'已從包裝照片辨識，可修改（原型模擬）':'白牌、雜牌可以不填'}</p>
+
+  <div class="mt-4 rounded-xl border bg-surface ${dup?'border-soon':'border-line'}">
+    <button data-label-tg class="flex w-full items-center gap-2 px-3.5 py-3 text-left text-[14px]">
+      <span class="text-ink-3 transition-transform ${labelOpen?'rotate-90':''}">${ic('chevR',15)}</span>
+      補充名稱 <span class="text-ink-3">選填</span>
+    </button>
+    ${labelOpen?`<div class="border-t border-line-2 px-3.5 pb-3.5 pt-3">
+      <p class="mb-2 text-[12.5px] leading-relaxed ${dup?'text-soon':'text-ink-3'}">${dup
+        ? `${esc(loc(F.loc).name)}已經有${esc(cat(F.cat).name)}了，填個補充名稱才分得出來。`
+        : '同位置、同類別有兩個以上時才需要，例如「水槽」「淨水器 PP」。'}</p>
+      <input data-f="label" value="${esc(F.label)}" placeholder="例如 水槽" class="${INP}">
+    </div>`:''}
+  </div>
+
+  ${sectDiv('更換')}
+
+  <div><label class="${LBL}">上次更換</label>
+    <div class="flex flex-wrap gap-2">
+      ${[['today','今天'],['other','其他日期'],['unknown','不知道']].map(([k,t])=>`<button data-last="${k}" class="${chip(F.last===k)}">${t}</button>`).join('')}
+    </div>
+    ${F.last==='other'?`<input type="date" data-f="lastDate" value="${F.lastDate}" max="${iso(today)}" class="${INP} mt-2">`:''}
+    ${F.last==='unknown'?`<div class="mt-2.5 rounded-xl bg-accent-soft px-3.5 py-3">
+      <label class="mb-2 block text-[13.5px]">那你覺得下次大概什麼時候要換？</label>
+      <input type="date" data-f="nextDue" value="${F.nextDue}" min="${iso(today)}" class="${INP}">
+    </div>`:''}
+  </div>
+
+  <div class="mt-4"><label class="${LBL}">週期 <span class="text-overdue">*</span></label>
+    <div class="flex flex-wrap gap-2">
+      ${PRE.map(n=>`<button data-fcyc="${n}" class="${chip(!F.custom && F.cycle==n, true)}">${n} 天</button>`).join('')}
+      <button data-fcyc="custom" class="${chip(F.custom)}">自訂</button>
+    </div>
+    ${F.custom?`<input type="number" inputmode="numeric" data-f="cycle" value="${esc(F.cycle)}" placeholder="天數" class="${INP} mt-2">`:''}
+    ${F.err==='cycle'?`<p class="mt-1.5 text-[12.5px] leading-relaxed text-overdue">請選擇週期。同一種耗材放在不同地方，更換頻率也不同，所以每個物品都要自己設。</p>`:''}
+  </div>
+
+  <div class="mt-4"><label class="${LBL}">提前提醒</label>
+    <div class="flex items-center gap-2">
+      <input type="number" inputmode="numeric" data-f="lead" value="${esc(F.lead)}" class="${INP} w-24">
+      <span class="nowrap text-[14px] text-ink-2">天前開始提醒</span>
+    </div>
+    <p class="mt-1.5 font-mono text-[11.5px] text-ink-3">帶入預設 ${settings.defaultLead} 天，可在設定修改預設值</p>
+  </div>
+
+  <div class="mt-4"><label class="${LBL}">備註</label>
+    <textarea data-f="note" rows="3" placeholder="購買通路、安裝注意事項…" class="${INP} leading-relaxed">${esc(F.note)}</textarea>
+  </div>
+
+  <div class="mt-4"><label class="${LBL}">物品照片 <span class="font-normal text-ink-3">機身、型號貼紙、濾網裝在哪</span></label>
+    <div class="flex flex-wrap gap-2">
+      ${Array.from({length:F.itemPhotos},()=>`<button data-fphoto-view aria-label="檢視照片" class="grid h-16 w-16 place-items-center rounded-xl border border-line bg-line-2 text-ink-3">${ic('image',20)}</button>`).join('')}
+      ${F.itemPhotos<5?`<button data-fphoto-add aria-label="新增照片" class="grid h-16 w-16 place-items-center rounded-xl border border-dashed border-line bg-surface text-ink-3">${ic('plus',20)}</button>`:''}
+    </div>
+  </div>
+
+  ${view.showPrice?`<div class="mt-4 rounded-xl border border-line bg-surface">
+    <button data-cost-tg class="flex w-full items-center gap-2 px-3.5 py-3 text-left text-[14px]">
+      <span class="text-ink-3 transition-transform ${F.costOpen?'rotate-90':''}">${ic('chevR',15)}</span>
+      花費 <span class="text-ink-3">選填</span>
+    </button>
+    ${F.costOpen?`<div class="grid grid-cols-[1fr_68px_76px] gap-2 border-t border-line-2 px-3.5 pb-3.5 pt-3">
+      <input data-f="price" type="number" inputmode="numeric" value="${esc(F.price)}" placeholder="單價（元）" class="${INP}">
+      <input data-f="qty" type="number" inputmode="numeric" value="${esc(F.qty)}" class="${INP}">
+      <input data-f="unit" value="${esc(F.unit)}" placeholder="單位" class="${INP}">
+    </div>`:''}
+  </div>`:''}
+
+  <button data-add-submit class="mt-6 w-full rounded-xl bg-accent py-4 text-[16px] font-semibold text-accent-ink">新增</button>
+  <p class="mt-3 text-center text-[12px] text-ink-3">新增時會同時寫入第一筆更換紀錄</p>`;
+}
+function submitAdd(){
+  const cyc = parseInt(F.cycle,10);
+  if(!(cyc>0)){
+    F.err = 'cycle'; render();
+    const el = document.querySelector('[data-fcyc]'); if(el) el.scrollIntoView({block:'center', behavior:'smooth'});
+    return;
+  }
+  const base = {seq:1, cycleDays:cyc, brand:F.brand.trim(), model:F.model.trim(), photos:F.photo?1:0,
+    purchase:(view.showPrice && F.price) ? {unitPrice:+F.price, qty:+F.qty||1, unit:F.unit||'個'} : null};
+  const first = F.last==='unknown'
+    ? {...base, on:null, expectedDue:parseISO(F.nextDue)}
+    : {...base, on: F.last==='today' ? new Date(today) : parseISO(F.lastDate)};
+  const it = {id:'n'+Date.now(), loc:F.loc, cat:F.cat, label:F.label.trim(), leadDays:parseInt(F.lead,10)||7,
+    note:F.note, photos:F.itemPhotos, paused:false, pausedUntil:null, logs:[first]};
+  ITEMS.push(it);
+  F = freshForm();
+  go('home');
+  showToast(`已新增 ${fullName(it)}`, ()=>{ const k=ITEMS.indexOf(it); if(k>=0) ITEMS.splice(k,1); });
+}
+
+/* ================= 設定 ================= */
+function themeSeg(){
+  const b = (k,t,icon)=>`<button data-theme-set="${k}" class="nowrap flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-[13.5px] ${view.theme===k?'bg-ink font-medium text-ground':'text-ink-2'}">${ic(icon,15)}${t}</button>`;
+  return `<div class="flex gap-1 rounded-xl border border-line bg-surface p-1">${b('system','跟隨系統','monitor')}${b('light','淺色','sun')}${b('dark','深色','moon')}</div>`;
+}
+function switchRow(k, title, desc){
+  return `<button data-tog="${k}" role="switch" aria-checked="${!!view[k]}" class="flex w-full items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-3 text-left">
+    <span class="min-w-0 flex-1"><span class="block text-[14.5px]">${title}</span><span class="block text-[12px] text-ink-3">${desc}</span></span>
+    <span class="relative h-6 w-10 shrink-0 rounded-full ${view[k]?'bg-accent':'bg-line'}">
+      <span class="absolute top-0.5 h-5 w-5 rounded-full bg-surface shadow transition-all ${view[k]?'left-[18px]':'left-0.5'}"></span></span>
+  </button>`;
+}
+function placeRows(list, kind){
+  return list.map((x,i)=>`<button data-edit-${kind}="${x.id}" class="flex w-full items-center gap-3 px-3.5 py-3 text-left ${i?'border-t border-line-2':''}">
+    <span class="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-line-2 text-ink-2">${ic(x.icon,19)}</span>
+    <span class="min-w-0 flex-1 truncate text-[15px]">${esc(x.name)}</span>
+    <span class="nowrap font-mono text-[12px] text-ink-3">${ITEMS.filter(it=>it[kind]===x.id).length} 項</span>
+    <span class="text-ink-3">${ic('chevR',16)}</span>
+  </button>`).join('');
+}
+function reorderRows(){
+  return LOCS.map((l,i)=>`<div class="flex items-center gap-2.5 px-3 py-2.5 ${i?'border-t border-line-2':''}">
+    <span class="text-ink-3">${ic('grip',18)}</span>
+    <span class="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-line-2 text-ink-2">${ic(l.icon,19)}</span>
+    <span class="min-w-0 flex-1 truncate text-[15px]">${esc(l.name)}</span>
+    <button data-move="${i}" data-dir="-1" ${i===0?'disabled':''} aria-label="往上" class="grid h-9 w-9 place-items-center rounded-lg border border-line text-ink-2 disabled:opacity-30"><span class="grid rotate-180">${ic('chevD',18)}</span></button>
+    <button data-move="${i}" data-dir="1" ${i===LOCS.length-1?'disabled':''} aria-label="往下" class="grid h-9 w-9 place-items-center rounded-lg border border-line text-ink-2 disabled:opacity-30">${ic('chevD',18)}</button>
+  </div>`).join('');
+}
+function renderSettings(){
+  return `
+  ${sectDiv('外觀')}
+  ${themeSeg()}
+  <div class="mt-2">${switchRow('itemIcons','物品 icon','在首頁列表顯示類別的 icon')}</div>
+
+  ${sectDiv('提醒')}
+  <button data-edit-lead class="flex w-full items-center justify-between gap-4 rounded-2xl bg-surface px-4 py-3 text-left shadow-card">
+    <span><span class="block text-[14.5px]">新物品預設提前提醒</span><span class="block text-[12px] text-ink-3">只影響之後新增的物品</span></span>
+    <span class="nowrap flex items-center gap-1 font-mono text-[14px]">${settings.defaultLead} 天<span class="text-ink-3">${ic('chevR',16)}</span></span>
+  </button>
+
+  <div class="mb-2.5 mt-6 flex items-center gap-2.5">
+    <h2 class="nowrap text-[13px] font-semibold tracking-wide text-ink-2">位置</h2>
+    <span class="h-px flex-1 bg-line"></span>
+    <button data-reorder class="nowrap text-[13px] font-medium text-accent">${view.reorderLocs?'完成':'調整順序'}</button>
+  </div>
+  <div class="overflow-hidden rounded-2xl bg-surface shadow-card">
+    ${view.reorderLocs ? reorderRows() : placeRows(LOCS,'loc')}
+    <button ${view.reorderLocs?'hidden':''} data-new-loc class="flex w-full items-center gap-2 border-t border-line-2 px-3.5 py-3 text-[14px] text-accent">${ic('plus',17)}新增位置</button>
+  </div>
+  <p class="mt-2 text-[12px] leading-relaxed text-ink-3">${view.reorderLocs ? '用箭頭調整順序。正式版可以直接拖曳把手，拖曳的手感留到實作時用手機測。' : '點一下可以改名稱和 icon。這個順序就是首頁的排列順序，有逾期的位置會暫時置頂。'}</p>
+
+  ${sectDiv('類別')}
+  <div class="overflow-hidden rounded-2xl bg-surface shadow-card">
+    ${placeRows(CATS,'cat')}
+    <button data-new-cat class="flex w-full items-center gap-2 border-t border-line-2 px-3.5 py-3 text-[14px] text-accent">${ic('plus',17)}新增類別</button>
+  </div>
+  <p class="mt-2 text-[12px] leading-relaxed text-ink-3">點一下可以改名稱和 icon。類別只負責分組與 icon，物品沿用類別的 icon。</p>
+
+  ${sectDiv('資料')}
+  <div class="grid grid-cols-2 gap-2">
+    <button data-export class="rounded-xl border border-line bg-surface py-3 text-[14px]">匯出備份</button>
+    <button data-restore class="rounded-xl border border-line bg-surface py-3 text-[14px]">還原</button>
+  </div>`;
+}
+
+/* ================= Sheet 與 Toast ================= */
+function makeSheet(){
+  const scrim = document.createElement('div');
+  scrim.dataset.sheet = '1';
+  scrim.className = 'fixed inset-0 z-40 flex items-end justify-center';
+  scrim.style.background = 'var(--scrim)';
+  // Sheet 內的點擊不往外傳到 document。
+  // 原因：sheet 的 draw() 會整塊重寫內容，被點的元素在 document 層收到事件時已經脫離 DOM，
+  // 全域 handler 的 closest('[data-sheet]') 找不到 scrim，會把同一個點擊再處理一次
+  // （v3 的 bug：原型選單的花費開關被切兩次，看起來開了、實際仍是關）。
+  // 這個 listener 必須比各 sheet 自己的 click listener 先註冊；同一元素上的其他 listener 仍會執行。
+  scrim.addEventListener('click', e=>e.stopPropagation());
+  const body = document.createElement('div');
+  body.className = 'anim-up max-h-[90dvh] w-full max-w-[430px] overflow-y-auto rounded-t-[20px] bg-surface px-[18px] pt-5';
+  body.style.paddingBottom = 'calc(22px + env(safe-area-inset-bottom))';
+  scrim.appendChild(body);
+  document.body.appendChild(scrim);
+  const mo = new MutationObserver(()=>{
+    mo.disconnect();
+    hydrateIcons(body);
+    mo.observe(body, {childList:true, subtree:true});
+  });
+  mo.observe(body, {childList:true, subtree:true});
+  return {scrim, body, close:()=>{ mo.disconnect(); scrim.remove(); }};
+}
+let toastTimer = null;
+function showToast(msg, undo){
+  clearTimeout(toastTimer);
+  const old = $('toast'); if(old) old.remove();
+  const t = document.createElement('div');
+  t.id = 'toast';
+  // 不用 transform 置中，避免跟進場動畫的 transform 互相覆蓋
+  t.className = 'anim-up fixed inset-x-0 z-50 mx-auto flex w-[calc(100%-32px)] max-w-[398px] items-center gap-3 rounded-xl bg-ink px-4 py-3 text-[14px] text-ground shadow-lg';
+  t.style.bottom = 'calc(92px + env(safe-area-inset-bottom))';
+  t.innerHTML = `<span class="min-w-0 flex-1">${esc(msg)}</span>${undo?'<button class="nowrap font-semibold underline underline-offset-4">復原</button>':''}`;
+  document.body.appendChild(t);
+  if(undo) t.querySelector('button').onclick = ()=>{ undo(); t.remove(); render(); };
+  toastTimer = setTimeout(()=>t.remove(), 5200);
+}
+
+/* ---------- 換好了：確認面板（規格草稿 #7） ---------- */
+function openDone(id){
+  const it = find(id), last = it.logs[0];
+  const s = {date:'today', dateVal:iso(today), brand:last.brand, model:last.model,
+    cycle:String(last.cycleDays), custom:!PRE.includes(last.cycleDays),
+    photo:false, recog:false, bought:false, price:'', qty:'1', unit:'', err:false};
+  const {scrim, body, close} = makeSheet();
+  const same = ()=>s.brand.trim()===last.brand && s.model.trim()===last.model;
+  const bmHint = ()=> s.recog ? '已從包裝照片辨識，可修改（原型模擬）'
+                   : same() ? (brandModel(last) ? '沿用上次' : '上次沒填') : '與上次不同，歷史會標示「型號變更」';
+  const bmColor = ()=> s.recog ? 'var(--accent)' : same() ? 'var(--ink-3)' : 'var(--soon)';
+
+  const draw = ()=>{
+    body.innerHTML = `
+    <div class="flex items-start justify-between gap-3">
+      <div class="min-w-0"><h3 class="text-[18px] font-semibold">換好了</h3>
+        <p class="mt-0.5 truncate text-[13.5px] text-ink-3">${esc(fullName(it))}</p></div>
+      <button data-close class="-mr-1.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-ink-3" aria-label="關閉">${ic('x',20)}</button>
+    </div>
+
+    <div class="mt-4"><label class="${LBL}">更換日期</label>
+      <div class="flex gap-2">
+        <button data-date="today" class="${chip(s.date==='today')}">今天</button>
+        <button data-date="other" class="${chip(s.date==='other')}">其他日期</button>
+      </div>
+      ${s.date==='other'?`<input type="date" data-k="dateVal" value="${s.dateVal}" max="${iso(today)}" class="${INP} mt-2">`:''}
+    </div>
+
+    <button data-shoot class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-dashed border-accent bg-accent-soft py-3 text-[14.5px] font-medium text-accent">
+      ${ic('camera',19)}${s.photo?'已拍耗材包裝 · 重拍':'拍耗材包裝，自動填品牌型號'}</button>
+
+    <div class="mt-3 grid grid-cols-2 gap-2">
+      <div><label class="${LBL}">品牌</label><input data-k="brand" value="${esc(s.brand)}" placeholder="選填" class="${INP}"></div>
+      <div><label class="${LBL}">型號</label><input data-k="model" value="${esc(s.model)}" placeholder="選填" class="${INP}"></div>
+    </div>
+    <p id="bmHint" class="mt-1.5 font-mono text-[11.5px]" style="color:${bmColor()}">${bmHint()}</p>
+
+    <div class="mt-3"><label class="${LBL}">週期</label>
+      <div class="flex flex-wrap gap-2">
+        ${PRE.map(n=>`<button data-cyc="${n}" class="${chip(!s.custom && s.cycle==n, true)}">${n} 天</button>`).join('')}
+        <button data-cyc="custom" class="${chip(s.custom)}">自訂</button>
+      </div>
+      ${s.custom?`<input type="number" inputmode="numeric" data-k="cycle" value="${esc(s.cycle)}" placeholder="天數" class="${INP} mt-2">`:''}
+      <p class="mt-1.5 font-mono text-[11.5px] ${String(last.cycleDays)===String(s.cycle)?'text-ink-3':'text-soon'}">${String(last.cycleDays)===String(s.cycle)?'沿用上次':`與上次不同（上次 ${last.cycleDays} 天）`}</p>
+    </div>
+
+    ${view.showPrice?`
+    <button data-bought class="mt-4 flex w-full items-center gap-2.5 rounded-xl border border-line px-3.5 py-3 text-left text-[14px]">
+      <span class="grid h-5 w-5 shrink-0 place-items-center rounded-md border ${s.bought?'border-accent bg-accent text-accent-ink':'border-line'}">${s.bought?ic('check',14,2.5):''}</span>
+      這次有買新的
+    </button>
+    ${s.bought?`<div class="mt-2 grid grid-cols-[1fr_68px_76px] gap-2">
+      <input data-k="price" type="number" inputmode="numeric" value="${esc(s.price)}" placeholder="單價（元）" class="${INP}">
+      <input data-k="qty" type="number" inputmode="numeric" value="${esc(s.qty)}" class="${INP}">
+      <input data-k="unit" value="${esc(s.unit)}" placeholder="單位" class="${INP}">
+    </div>`:''}`:''}
+
+    ${s.err?'<p class="mt-3 text-[13px] text-overdue">請填週期天數</p>':''}
+    <button data-confirm class="mt-5 w-full rounded-xl bg-accent py-3.5 text-[15.5px] font-semibold text-accent-ink">確認</button>`;
+  };
+  draw();
+
+  scrim.addEventListener('input', e=>{
+    const k = e.target.dataset.k; if(!k) return;
+    s[k] = e.target.value;
+    if(k==='brand' || k==='model'){
+      s.recog = false;
+      const hint = body.querySelector('#bmHint');
+      if(hint){ hint.textContent = bmHint(); hint.style.color = bmColor(); }
+    }
+  });
+  scrim.addEventListener('click', e=>{
+    const t = e.target;
+    if(t===scrim || t.closest('[data-close]')) return close();
+    const d = t.closest('[data-date]'); if(d){ s.date = d.dataset.date; return draw(); }
+    const c = t.closest('[data-cyc]');
+    if(c){ if(c.dataset.cyc==='custom') s.custom = true; else { s.custom = false; s.cycle = c.dataset.cyc; } s.err=false; return draw(); }
+    if(t.closest('[data-shoot]')){ s.photo = true; s.recog = true; s.brand = '3M'; s.model = '淨呼吸 9808'; return draw(); }
+    if(t.closest('[data-bought]')){ s.bought = !s.bought; return draw(); }
+    if(t.closest('[data-confirm]')){
+      const cyc = parseInt(s.cycle,10);
+      if(!(cyc>0)){ s.err = true; return draw(); }
+      const prev = {logs:it.logs.slice(), paused:it.paused, pausedUntil:it.pausedUntil};
+      const newLog = {
+        on: s.date==='today' ? new Date(today) : parseISO(s.dateVal),
+        cycleDays:cyc, brand:s.brand.trim(), model:s.model.trim(), photos:s.photo?1:0,
+        purchase:(view.showPrice && s.bought && s.price) ? {unitPrice:+s.price, qty:+s.qty||1, unit:s.unit||'個'} : null,
+        seq: nextSeq(it),
+      };
+      it.logs = [newLog, ...it.logs].sort(sortLogs);
+      it.paused = false; it.pausedUntil = null;
+      close(); render();
+      showToast(it.logs[0]===newLog ? `${fullName(it)} 已記錄` : '已記錄 · 日期早於上次更換，到期日沒有變',
+        ()=>Object.assign(it, prev));
+    }
+  });
+}
+
+/* ---------- 暫停 ---------- */
+function openPause(id){
+  const it = find(id);
+  if(it.paused){
+    const prev = {paused:true, pausedUntil:it.pausedUntil};
+    it.paused = false; it.pausedUntil = null;
+    render(); showToast(`${fullName(it)} 已恢復`, ()=>Object.assign(it, prev));
+    return;
+  }
+  let pick = null, custom = iso(addDays(today,120));
+  const opts = [
+    {k:'3m', t:'3 個月後', d:iso(addDays(today,90))},
+    {k:'may', t:'明年 5 月', d:nextMay},
+    {k:'pick', t:'指定日期', d:null},
+  ];
+  const {scrim, body, close} = makeSheet();
+  const draw = ()=>{
+    body.innerHTML = `
+    <h3 class="text-[18px] font-semibold">暫停「${esc(fullName(it))}」</h3>
+    <p class="mt-1.5 text-[13.5px] leading-relaxed text-ink-3">暫停期間不計到期、不提醒。<b class="text-ink-2">預計恢復日必填</b>——忘了恢復的話，這個 app 會永遠不再提醒你，而且不會有任何異狀。</p>
+    <div class="mt-4 flex flex-col gap-2">
+      ${opts.map(o=>`<button data-p="${o.k}" class="flex w-full items-center justify-between rounded-xl border px-3.5 py-3 text-left text-[14.5px] ${pick===o.k?'border-accent bg-accent-soft text-accent':'border-line'}">
+        <span>${o.t}</span><span class="nowrap font-mono text-[12px] text-ink-3">${o.d||'自己選'}</span></button>`).join('')}
+    </div>
+    ${pick==='pick'?`<input type="date" data-k="custom" value="${custom}" min="${iso(addDays(today,1))}" class="${INP} mt-2">`:''}
+    ${pick?'':'<p class="mt-3 text-[12.5px] text-overdue">請先選一個恢復時間</p>'}
+    <button data-confirm ${pick?'':'disabled'} class="mt-4 w-full rounded-xl bg-accent py-3.5 text-[15px] font-semibold text-accent-ink disabled:opacity-40">確定暫停</button>
+    <button data-close class="mt-2 w-full py-3 text-[14px] text-ink-3">取消</button>`;
+  };
+  draw();
+  scrim.addEventListener('input', e=>{ if(e.target.dataset.k==='custom') custom = e.target.value; });
+  scrim.addEventListener('click', e=>{
+    const t = e.target;
+    if(t===scrim || t.closest('[data-close]')) return close();
+    const p = t.closest('[data-p]'); if(p){ pick = p.dataset.p; return draw(); }
+    if(t.closest('[data-confirm]') && pick){
+      const prev = {paused:false, pausedUntil:null};
+      it.paused = true;
+      it.pausedUntil = pick==='3m' ? opts[0].d : pick==='may' ? nextMay : custom;
+      close(); render(); showToast(`${fullName(it)} 已暫停`, ()=>Object.assign(it, prev));
+    }
+  });
+}
+
+/* ---------- 原型選單 ---------- */
+function openProto(){
+  const screens = [
+    ['首頁','home'],
+    ['物品（依類別分組）','items'],
+    ['詳情：客廳 · 冷氣濾網','detail:lr-ac','型號變更、實際間隔回饋'],
+    ['詳情：主臥 · 冷氣濾網','detail:mb-ac','週期從 90 天改成 60 天'],
+    ['詳情：浴室 · 濾心 · 蓮蓬頭','detail:ba-ft','日期未記錄、只有一筆紀錄（不能刪）'],
+    ['詳情：陽台 · 洗衣機濾網','detail:bc-wm','沒填品牌型號，按「編輯」補上'],
+    ['編輯：陽台 · 洗衣機濾網','edit:bc-wm'],
+    ['新增物品','add'],
+    ['設定','settings'],
+  ];
+  const {scrim, body, close} = makeSheet();
+  const draw = ()=>{
+    body.innerHTML = `
+    <div class="flex items-center justify-between">
+      <h3 class="text-[18px] font-semibold">原型</h3>
+      <button data-close class="-mr-1.5 grid h-9 w-9 place-items-center rounded-lg text-ink-3" aria-label="關閉">${ic('x',20)}</button>
+    </div>
+    <p class="mt-1 text-[13px] text-ink-3">P0 專用，正式版不會有這個選單。</p>
+    ${sectDiv('主題')}
+    ${themeSeg()}
+    ${sectDiv('跳到畫面')}
+    <div class="flex flex-col gap-2">
+      ${screens.map((sc,i)=>`<button data-scr="${i}" class="flex w-full items-center gap-3 rounded-xl border border-line px-3.5 py-3 text-left">
+        <span class="min-w-0 flex-1"><span class="block text-[14.5px]">${sc[0]}</span>${sc[2]?`<span class="block text-[12px] text-ink-3">${sc[2]}</span>`:''}</span>
+        <span class="text-ink-3">${ic('chevR',16)}</span></button>`).join('')}
+    </div>
+    <p class="mt-4 text-[12px] text-ink-3">暫停流程：進任一物品詳情頁按「暫停」。</p>`;
+  };
+  draw();
+  scrim.addEventListener('click', e=>{
+    const t = e.target;
+    if(t===scrim || t.closest('[data-close]')) return close();
+    const g = t.closest('[data-tog]'); if(g){ view[g.dataset.tog] = !view[g.dataset.tog]; draw(); render(); return; }
+    const th = t.closest('[data-theme-set]'); if(th){ setTheme(th.dataset.themeSet); draw(); render(); return; }
+    const sc = t.closest('[data-scr]');
+    if(sc){
+      const v = screens[+sc.dataset.scr][1];
+      close();
+      if(v.startsWith('detail:')) go('detail', v.slice(7));
+      else if(v.startsWith('edit:')){ view.detailId = v.slice(5); openEdit(v.slice(5)); }
+      else go(v);
+    }
+  });
+}
+
+/* ---------- 位置／類別：編輯名稱與 icon ---------- */
+function openEditPlace(kind, id){
+  const isLoc = kind==='loc';
+  const list = isLoc ? LOCS : CATS;
+  const icons = isLoc ? ROOM_ICONS : CAT_ICONS;
+  const word = isLoc ? '位置' : '類別';
+  const target = id ? list.find(x=>x.id===id) : null;
+  const used = target ? ITEMS.filter(i=>i[kind]===target.id).length : 0;
+  const form = {name: target ? target.name : '', icon: target ? target.icon : icons[0], err:''};
+  const {scrim, body, close} = makeSheet();
+  const draw = ()=>{
+    body.innerHTML = `
+    <div class="flex items-center justify-between">
+      <h3 class="text-[18px] font-semibold">${target?'編輯':'新增'}${word}</h3>
+      <button data-close class="-mr-1.5 grid h-9 w-9 place-items-center rounded-lg text-ink-3" aria-label="關閉">${ic('x',20)}</button>
+    </div>
+    <div class="mt-4 flex items-end gap-3">
+      <span class="grid h-[46px] w-[46px] shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">${ic(form.icon,24)}</span>
+      <div class="min-w-0 flex-1"><label class="${LBL}">名稱</label>
+        <input data-k="name" value="${esc(form.name)}" placeholder="${isLoc?'例如 主臥':'例如 冷氣濾網'}" class="${INP}"></div>
+    </div>
+    ${form.err?`<p class="mt-1.5 text-[12.5px] text-overdue">${esc(form.err)}</p>`:''}
+    <label class="${LBL} mt-4">icon</label>
+    <div class="grid grid-cols-6 gap-1.5">
+      ${icons.map(n=>`<button data-icon="${n}" aria-label="${n}" aria-pressed="${form.icon===n}" class="grid aspect-square place-items-center rounded-xl border ${form.icon===n?'border-accent bg-accent-soft text-accent':'border-line-2 text-ink-2'}">${ic(n,22)}</button>`).join('')}
+    </div>
+    <button data-save class="mt-5 w-full rounded-xl bg-accent py-3.5 text-[15.5px] font-semibold text-accent-ink">${target?'儲存':'新增'}</button>
+    ${target?`<button data-del ${used?'disabled':''} class="mt-2 w-full rounded-xl py-3 text-[14px] text-overdue disabled:text-ink-3">刪除${word}</button>
+      ${used?`<p class="text-center text-[12px] leading-relaxed text-ink-3">還有 ${used} 個物品在這個${word}，要先移到別的${word}才能刪除</p>`:''}`:''}`;
+  };
+  draw();
+  scrim.addEventListener('input', e=>{ if(e.target.dataset.k==='name') form.name = e.target.value; });
+  scrim.addEventListener('click', e=>{
+    const t = e.target;
+    if(t===scrim || t.closest('[data-close]')) return close();
+    const b = t.closest('[data-icon]'); if(b){ form.icon = b.dataset.icon; form.err=''; return draw(); }
+    if(t.closest('[data-save]')){
+      const name = form.name.trim();
+      if(!name){ form.err = `請填${word}名稱`; return draw(); }
+      if(list.some(x=>x.name===name && x!==target)){ form.err = `已經有「${name}」了`; return draw(); }
+      if(target){
+        const prev = {name:target.name, icon:target.icon};
+        target.name = name; target.icon = form.icon;
+        close(); render(); showToast(`已更新${word}「${name}」`, ()=>Object.assign(target, prev));
+      } else {
+        const obj = {id:(isLoc?'l':'c')+Date.now(), name, icon:form.icon};
+        list.push(obj);
+        close(); render(); showToast(`已新增${word}「${name}」`, ()=>{ const k=list.indexOf(obj); if(k>=0) list.splice(k,1); });
+      }
+      return;
+    }
+    if(t.closest('[data-del]') && target && !used){
+      const k = list.indexOf(target);
+      list.splice(k,1);
+      close(); render(); showToast(`已刪除${word}「${target.name}」`, ()=>list.splice(k,0,target));
+    }
+  });
+}
+
+/* ---------- 照片：選擇來源、檢視與刪除 ---------- */
+function openPhotoPicker(title, onPick){
+  const {scrim, body, close} = makeSheet();
+  body.innerHTML = `
+    <h3 class="text-[17px] font-semibold">${esc(title)}</h3>
+    <div class="mt-4 flex flex-col gap-2">
+      <button data-src="camera" class="flex w-full items-center gap-3 rounded-xl border border-line px-4 py-3.5 text-left text-[15px]">${ic('camera',20)}拍照</button>
+      <button data-src="album" class="flex w-full items-center gap-3 rounded-xl border border-line px-4 py-3.5 text-left text-[15px]">${ic('image',20)}從相簿選擇</button>
+    </div>
+    <button data-close class="mt-2 w-full py-3 text-[14px] text-ink-3">取消</button>`;
+  scrim.addEventListener('click', e=>{
+    const t = e.target;
+    if(t===scrim || t.closest('[data-close]')) return close();
+    if(t.closest('[data-src]')){ close(); onPick(); }
+  });
+}
+function openPhotoView(title, onDelete){
+  const {scrim, body, close} = makeSheet();
+  body.innerHTML = `
+    <div class="flex items-center justify-between">
+      <h3 class="text-[17px] font-semibold">${esc(title)}</h3>
+      <button data-close class="-mr-1.5 grid h-9 w-9 place-items-center rounded-lg text-ink-3" aria-label="關閉">${ic('x',20)}</button>
+    </div>
+    <div class="mt-3 grid aspect-[4/3] w-full place-items-center rounded-2xl bg-line-2 text-ink-3">${ic('image',40,1.25)}</div>
+    <button data-delphoto class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-line py-3 text-[14.5px] text-overdue">${ic('trash',17)}刪除這張照片</button>`;
+  scrim.addEventListener('click', e=>{
+    const t = e.target;
+    if(t===scrim || t.closest('[data-close]')) return close();
+    if(t.closest('[data-delphoto]')){ close(); onDelete(); }
+  });
+}
+
+/* ---------- 刪除物品 ---------- */
+function openDeleteItem(id){
+  const it = find(id);
+  const nPhotos = it.photos + it.logs.reduce((a,l)=>a+(l.photos||0), 0);
+  const hasPurchase = it.logs.some(l=>l.purchase);
+  const {scrim, body, close} = makeSheet();
+  body.innerHTML = `
+    <h3 class="text-[18px] font-semibold">刪除「${esc(fullName(it))}」？</h3>
+    <p class="mt-2 text-[13.5px] leading-relaxed text-ink-3">會一併刪除 <b class="text-ink-2">${it.logs.length} 筆更換紀錄</b>${nPhotos?`和 <b class="text-ink-2">${nPhotos} 張照片</b>`:''}。${hasPurchase?'這些紀錄裡的採購價格也會一起刪除。':''}</p>
+    <p class="mt-2 text-[13px] leading-relaxed text-ink-3">如果只是暫時不用，例如冬天的冷氣，可以改用「暫停」。</p>
+    <button data-del class="mt-5 w-full rounded-xl bg-overdue py-3.5 text-[15.5px] font-semibold text-surface">刪除</button>
+    <button data-close class="mt-2 w-full py-3 text-[14px] text-ink-3">取消</button>`;
+  scrim.addEventListener('click', e=>{
+    const t = e.target;
+    if(t===scrim || t.closest('[data-close]')) return close();
+    if(t.closest('[data-del]')){
+      const k = ITEMS.indexOf(it);
+      ITEMS.splice(k, 1);
+      close(); go(view.back || 'home');
+      showToast(`已刪除 ${fullName(it)}`, ()=>{ ITEMS.splice(k, 0, it); });
+    }
+  });
+}
+
+/* ---------- 設定：新物品預設提前提醒 ---------- */
+function openLeadSetting(){
+  let v = String(settings.defaultLead);
+  const {scrim, body, close} = makeSheet();
+  const draw = ()=>{
+    body.innerHTML = `
+    <h3 class="text-[18px] font-semibold">新物品預設提前提醒</h3>
+    <p class="mt-1.5 text-[13.5px] leading-relaxed text-ink-3">新增物品時會帶入這個天數。<b class="text-ink-2">已經建立的物品不會改變</b>，要改請到各物品的編輯頁。</p>
+    <div class="mt-4 flex flex-wrap gap-2">${[3,7,14,30].map(n=>`<button data-lv="${n}" class="${chip(v==n, true)}">${n} 天</button>`).join('')}</div>
+    <div class="mt-3 flex items-center gap-2">
+      <input type="number" inputmode="numeric" data-k="v" value="${esc(v)}" class="${INP} w-24">
+      <span class="nowrap text-[14px] text-ink-2">天前開始提醒</span>
+    </div>
+    <button data-save class="mt-5 w-full rounded-xl bg-accent py-3.5 text-[15.5px] font-semibold text-accent-ink">儲存</button>
+    <button data-close class="mt-2 w-full py-3 text-[14px] text-ink-3">取消</button>`;
+  };
+  draw();
+  scrim.addEventListener('input', e=>{ if(e.target.dataset.k==='v') v = e.target.value; });
+  scrim.addEventListener('click', e=>{
+    const t = e.target;
+    if(t===scrim || t.closest('[data-close]')) return close();
+    const lv = t.closest('[data-lv]'); if(lv){ v = lv.dataset.lv; return draw(); }
+    if(t.closest('[data-save]')){
+      const n = parseInt(v,10); if(!(n>=0)) return;
+      const prev = settings.defaultLead;
+      settings.defaultLead = n;
+      close(); render();
+      showToast(`新物品預設提前提醒改為 ${n} 天`, ()=>{ settings.defaultLead = prev; });
+    }
+  });
+}
+
+/* ---------- 設定：匯出備份、還原 ---------- */
+function openExport(){
+  const nLogs = ITEMS.reduce((a,i)=>a+i.logs.length, 0);
+  const nPhotos = ITEMS.reduce((a,i)=>a+i.photos+i.logs.reduce((b,l)=>b+(l.photos||0),0), 0);
+  const {scrim, body, close} = makeSheet();
+  body.innerHTML = `
+    <h3 class="text-[18px] font-semibold">匯出備份</h3>
+    <p class="mt-1.5 text-[13.5px] leading-relaxed text-ink-3">把所有資料打包成一個檔案，可以存到電腦或雲端硬碟。</p>
+    <div class="mt-4 rounded-2xl border border-line bg-surface-2 px-4 py-1">
+      ${kv('物品', `${ITEMS.length} 項`)}${kv('更換紀錄', `${nLogs} 筆`)}${kv('照片', `${nPhotos} 張`)}${kv('位置、類別', `${LOCS.length} 個、${CATS.length} 個`)}
+    </div>
+    <p class="mt-3 font-mono text-[12px] text-ink-3">檔名：換了沒-備份-${iso(today)}.zip</p>
+    <button data-go class="mt-5 w-full rounded-xl bg-accent py-3.5 text-[15.5px] font-semibold text-accent-ink">匯出</button>
+    <button data-close class="mt-2 w-full py-3 text-[14px] text-ink-3">取消</button>`;
+  scrim.addEventListener('click', e=>{
+    const t = e.target;
+    if(t===scrim || t.closest('[data-close]')) return close();
+    if(t.closest('[data-go]')){ close(); showToast('已匯出備份（原型沒有真的產生檔案）'); }
+  });
+}
+function openRestore(){
+  let picked = false;
+  const {scrim, body, close} = makeSheet();
+  const draw = ()=>{
+    body.innerHTML = !picked ? `
+    <h3 class="text-[18px] font-semibold">還原備份</h3>
+    <p class="mt-1.5 text-[13.5px] leading-relaxed text-ink-3">選擇之前匯出的備份檔。</p>
+    <div class="mt-4 flex items-start gap-2.5 rounded-xl bg-overdue-soft px-3.5 py-3 text-[13px] leading-relaxed text-overdue">
+      ${ic('triangle-alert',18)}<span>還原會用備份檔<b>覆蓋目前所有資料</b>，目前的資料不會保留。</span>
+    </div>
+    <button data-pick class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-dashed border-line py-4 text-[14.5px] text-ink-2">${ic('upload',18)}選擇備份檔</button>
+    <button data-close class="mt-2 w-full py-3 text-[14px] text-ink-3">取消</button>`
+    : `
+    <h3 class="text-[18px] font-semibold">確定要還原嗎？</h3>
+    <div class="mt-4 rounded-2xl border border-line bg-surface-2 px-4 py-1">
+      ${kv('檔案','換了沒-備份-2026-06-01.zip')}${kv('備份日期','2026-06-01')}${kv('內容','物品 12 項、更換紀錄 31 筆、照片 18 張')}
+    </div>
+    <p class="mt-3 text-[13px] leading-relaxed text-ink-3">目前有物品 ${ITEMS.length} 項。還原後會變成備份檔裡的 12 項，備份之後新增或修改的資料都會消失。</p>
+    <button data-restore-go class="mt-5 w-full rounded-xl bg-overdue py-3.5 text-[15.5px] font-semibold text-surface">覆蓋並還原</button>
+    <button data-back class="mt-2 w-full py-3 text-[14px] text-ink-3">重新選擇</button>`;
+  };
+  draw();
+  scrim.addEventListener('click', e=>{
+    const t = e.target;
+    if(t===scrim || t.closest('[data-close]')) return close();
+    if(t.closest('[data-pick]')){ picked = true; return draw(); }
+    if(t.closest('[data-back]')){ picked = false; return draw(); }
+    if(t.closest('[data-restore-go]')){ close(); showToast('已還原（原型沒有真的覆蓋資料）'); }
+  });
+}
+
+/* ---------- 物品編輯頁（規格草稿 #14 提案） ---------- */
+let E = null;
+function openEdit(id){
+  const it = find(id), lg = it.logs[0];
+  E = {id, loc:it.loc, cat:it.cat, label:it.label, brand:lg.brand, model:lg.model,
+       cycle:String(lg.cycleDays), custom:!PRE.includes(lg.cycleDays), lead:String(it.leadDays), note:it.note, err:''};
+  go('edit', id);
+}
+function renderEdit(){
+  const it = find(E.id), lg = it.logs[0];
+  const dup = ITEMS.some(i=>i!==it && i.loc===E.loc && i.cat===E.cat);
+  const preview = [loc(E.loc).name, cat(E.cat).name, E.label.trim()].filter(Boolean).join(' · ');
+  return `
+  <div class="mt-4 grid grid-cols-2 gap-2.5">
+    <div><label class="${LBL}">位置</label>${selectHTML('loc',LOCS,E.loc,'e')}</div>
+    <div><label class="${LBL}">類別</label>${selectHTML('cat',CATS,E.cat,'e')}</div>
+  </div>
+  <p class="mt-2 text-[12.5px] text-ink-3">會顯示為 <span class="font-medium text-ink">${esc(preview)}</span></p>
+
+  <div class="mt-4"><label class="${LBL}">補充名稱 <span class="font-normal text-ink-3">選填</span></label>
+    <input data-e="label" value="${esc(E.label)}" placeholder="例如 水槽" class="${INP}">
+    ${dup?`<p class="mt-1.5 text-[12.5px] leading-relaxed text-soon">${esc(loc(E.loc).name)}還有另一個${esc(cat(E.cat).name)}，填個補充名稱才分得出來。</p>`:''}
+  </div>
+
+  ${sectDiv('目前的耗材')}
+  <p class="mb-3 rounded-xl bg-accent-soft px-3.5 py-2.5 text-[12.5px] leading-relaxed text-ink-2">
+    品牌、型號、週期會寫入<b>最近一次更換紀錄</b>（${lg.on?iso(lg.on):'日期未記錄'}）。要改更早的紀錄，請到詳情頁的更換歷史點那一筆。</p>
+  <div class="grid grid-cols-2 gap-2.5">
+    <div><label class="${LBL}">品牌 <span class="font-normal text-ink-3">選填</span></label>
+      <input data-e="brand" value="${esc(E.brand)}" placeholder="例如 3M" class="${INP}"></div>
+    <div><label class="${LBL}">型號 <span class="font-normal text-ink-3">選填</span></label>
+      <input data-e="model" value="${esc(E.model)}" placeholder="例如 9808" class="${INP}"></div>
+  </div>
+  <div class="mt-4"><label class="${LBL}">週期 <span class="text-overdue">*</span></label>
+    <div class="flex flex-wrap gap-2">
+      ${PRE.map(n=>`<button data-ecyc="${n}" class="${chip(!E.custom && E.cycle==n, true)}">${n} 天</button>`).join('')}
+      <button data-ecyc="custom" class="${chip(E.custom)}">自訂</button>
+    </div>
+    ${E.custom?`<input type="number" inputmode="numeric" data-e="cycle" value="${esc(E.cycle)}" placeholder="天數" class="${INP} mt-2">`:''}
+    ${E.err?`<p class="mt-1.5 text-[12.5px] text-overdue">${esc(E.err)}</p>`:''}
+  </div>
+
+  ${sectDiv('物品')}
+  <div><label class="${LBL}">提前提醒</label>
+    <div class="flex items-center gap-2">
+      <input type="number" inputmode="numeric" data-e="lead" value="${esc(E.lead)}" class="${INP} w-24">
+      <span class="nowrap text-[14px] text-ink-2">天前開始提醒</span>
+    </div></div>
+  <div class="mt-4"><label class="${LBL}">備註</label>
+    <textarea data-e="note" rows="3" placeholder="購買通路、安裝注意事項…" class="${INP} leading-relaxed">${esc(E.note)}</textarea></div>
+  <div class="mt-4"><label class="${LBL}">物品照片 <span class="font-normal text-ink-3">機身、型號貼紙 · 最多 5 張</span></label>
+    <div class="flex flex-wrap gap-2">
+      ${Array.from({length:it.photos},()=>`<button data-photo-view="${it.id}" aria-label="檢視照片" class="grid h-16 w-16 place-items-center rounded-xl border border-line bg-line-2 text-ink-3">${ic('image',20)}</button>`).join('')}
+      ${it.photos<5?`<button data-photo-add="${it.id}" aria-label="新增照片" class="grid h-16 w-16 place-items-center rounded-xl border border-dashed border-line bg-surface text-ink-3">${ic('plus',20)}</button>`:''}
+    </div></div>
+
+  <button data-edit-save class="mt-6 w-full rounded-xl bg-accent py-4 text-[16px] font-semibold text-accent-ink">儲存</button>`;
+}
+function saveEdit(){
+  const it = find(E.id), lg = it.logs[0];
+  const cyc = parseInt(E.cycle,10);
+  if(!(cyc>0)){ E.err = '請選擇週期'; render(); return; }
+  const prevItem = {loc:it.loc, cat:it.cat, label:it.label, leadDays:it.leadDays, note:it.note};
+  const prevLog = {brand:lg.brand, model:lg.model, cycleDays:lg.cycleDays};
+  Object.assign(it, {loc:E.loc, cat:E.cat, label:E.label.trim(), leadDays:parseInt(E.lead,10)||it.leadDays, note:E.note});
+  Object.assign(lg, {brand:E.brand.trim(), model:E.model.trim(), cycleDays:cyc});
+  E = null;
+  go('detail', it.id);
+  showToast('已儲存', ()=>{ Object.assign(it, prevItem); Object.assign(lg, prevLog); });
+}
+
+/* ---------- 更換紀錄編輯面板（規格草稿 #14 提案） ---------- */
+function openLogEdit(itemId, idx){
+  const it = find(itemId), lg = it.logs[idx];
+  const only = it.logs.length === 1;
+  const pu = lg.purchase;
+  const s = {hasDate:!!lg.on, date:lg.on?iso(lg.on):iso(today), brand:lg.brand, model:lg.model,
+    cycle:String(lg.cycleDays), custom:!PRE.includes(lg.cycleDays), photos:lg.photos||0,
+    bought:!!pu, price:pu?String(pu.unitPrice):'', qty:pu?String(pu.qty):'1', unit:pu?pu.unit:'', err:''};
+  const {scrim, body, close} = makeSheet();
+  const draw = ()=>{
+    body.innerHTML = `
+    <div class="flex items-start justify-between gap-3">
+      <div class="min-w-0"><h3 class="text-[18px] font-semibold">編輯更換紀錄</h3>
+        <p class="mt-0.5 truncate text-[13.5px] text-ink-3">${esc(fullName(it))}${idx===0?' · 最近一次':''}</p></div>
+      <button data-close class="-mr-1.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-ink-3" aria-label="關閉">${ic('x',20)}</button>
+    </div>
+
+    <div class="mt-4"><label class="${LBL}">更換日期</label>
+      ${lg.on
+        ? `<input type="date" data-k="date" value="${s.date}" max="${iso(today)}" class="${INP}">`
+        : `<div class="flex gap-2">
+             <button data-hasdate="0" class="${chip(!s.hasDate)}">日期未記錄</button>
+             <button data-hasdate="1" class="${chip(s.hasDate)}">補上日期</button>
+           </div>
+           ${s.hasDate?`<input type="date" data-k="date" value="${s.date}" max="${iso(today)}" class="${INP} mt-2">`:''}`}
+    </div>
+
+    <div class="mt-3 grid grid-cols-2 gap-2">
+      <div><label class="${LBL}">品牌</label><input data-k="brand" value="${esc(s.brand)}" placeholder="選填" class="${INP}"></div>
+      <div><label class="${LBL}">型號</label><input data-k="model" value="${esc(s.model)}" placeholder="選填" class="${INP}"></div>
+    </div>
+
+    <div class="mt-3"><label class="${LBL}">週期</label>
+      <div class="flex flex-wrap gap-2">
+        ${PRE.map(n=>`<button data-lcyc="${n}" class="${chip(!s.custom && s.cycle==n, true)}">${n} 天</button>`).join('')}
+        <button data-lcyc="custom" class="${chip(s.custom)}">自訂</button>
+      </div>
+      ${s.custom?`<input type="number" inputmode="numeric" data-k="cycle" value="${esc(s.cycle)}" placeholder="天數" class="${INP} mt-2">`:''}
+      ${idx===0?'<p class="mt-1.5 font-mono text-[11.5px] text-ink-3">這是最近一次，改週期會影響目前的到期日</p>':''}
+    </div>
+
+    <div class="mt-3"><label class="${LBL}">耗材照片 <span class="font-normal text-ink-3">最多 2 張</span></label>
+      <div class="flex gap-2">
+        ${Array.from({length:s.photos},()=>`<button data-lphoto-view aria-label="檢視照片" class="grid h-14 w-14 place-items-center rounded-xl border border-line bg-line-2 text-ink-3">${ic('image',18)}</button>`).join('')}
+        ${s.photos<2?`<button data-lphoto class="grid h-14 w-14 place-items-center rounded-xl border border-dashed border-line text-ink-3">${ic('camera',18)}</button>`:''}
+      </div>
+    </div>
+
+    ${view.showPrice?`
+    <button data-bought class="mt-4 flex w-full items-center gap-2.5 rounded-xl border border-line px-3.5 py-3 text-left text-[14px]">
+      <span class="grid h-5 w-5 shrink-0 place-items-center rounded-md border ${s.bought?'border-accent bg-accent text-accent-ink':'border-line'}">${s.bought?ic('check',14,2.5):''}</span>
+      這次有買新的
+    </button>
+    ${s.bought?`<div class="mt-2 grid grid-cols-[1fr_68px_76px] gap-2">
+      <input data-k="price" type="number" inputmode="numeric" value="${esc(s.price)}" placeholder="單價（元）" class="${INP}">
+      <input data-k="qty" type="number" inputmode="numeric" value="${esc(s.qty)}" class="${INP}">
+      <input data-k="unit" value="${esc(s.unit)}" placeholder="單位" class="${INP}">
+    </div>`:''}`:''}
+
+    ${s.err?`<p class="mt-3 text-[13px] text-overdue">${esc(s.err)}</p>`:''}
+    <button data-lsave class="mt-5 w-full rounded-xl bg-accent py-3.5 text-[15.5px] font-semibold text-accent-ink">儲存</button>
+    <button data-ldel ${only?'disabled':''} class="mt-2 w-full rounded-xl py-3 text-[14px] text-overdue disabled:text-ink-3">刪除這筆紀錄</button>
+    ${only?'<p class="text-center text-[12px] leading-relaxed text-ink-3">只剩這一筆，不能刪除。每個物品至少要有一筆更換紀錄，到期日才算得出來。</p>':''}`;
+  };
+  draw();
+  scrim.addEventListener('input', e=>{ const k = e.target.dataset.k; if(k) s[k] = e.target.value; });
+  scrim.addEventListener('click', e=>{
+    const t = e.target;
+    if(t===scrim || t.closest('[data-close]')) return close();
+    const hd = t.closest('[data-hasdate]'); if(hd){ s.hasDate = hd.dataset.hasdate==='1'; return draw(); }
+    const c = t.closest('[data-lcyc]');
+    if(c){ if(c.dataset.lcyc==='custom') s.custom = true; else { s.custom = false; s.cycle = c.dataset.lcyc; } s.err=''; return draw(); }
+    if(t.closest('[data-lphoto-view]')){ openPhotoView('耗材照片', ()=>{ s.photos--; draw(); }); return; }
+    if(t.closest('[data-lphoto]')){ openPhotoPicker('新增耗材照片', ()=>{ if(s.photos<2){ s.photos++; draw(); } }); return; }
+    if(t.closest('[data-bought]')){ s.bought = !s.bought; return draw(); }
+    if(t.closest('[data-lsave]')){
+      const cyc = parseInt(s.cycle,10);
+      if(!(cyc>0)){ s.err = '請填週期天數'; return draw(); }
+      const prevLogs = it.logs.map(x=>({...x}));
+      const before = {latest:it.logs[0], due:calcDue(it)};
+      Object.assign(lg, {brand:s.brand.trim(), model:s.model.trim(), cycleDays:cyc, photos:s.photos,
+        purchase:(s.bought && s.price) ? {unitPrice:+s.price, qty:+s.qty||1, unit:s.unit||'個'} : null});
+      if(s.hasDate){ lg.on = parseISO(s.date); delete lg.expectedDue; }
+      // 改了日期要依日期重新排序：日期最新的那筆就是「最近一次」。
+      // 日期未記錄的只可能是第一筆（最舊），排在最後。
+      it.logs.sort(sortLogs);
+      close(); render();
+      const out = outcomeText(it, before, lg);
+      showToast(out ? `已儲存 · ${out}` : '已儲存更換紀錄', ()=>{ it.logs = prevLogs; });
+      return;
+    }
+    if(t.closest('[data-ldel]') && !only){
+      const prevLogs = it.logs.slice();
+      const before = {latest:it.logs[0], due:calcDue(it)};
+      it.logs.splice(idx, 1);
+      close(); render();
+      const out = outcomeText(it, before, null);
+      showToast(out ? `已刪除 · ${out}` : '已刪除更換紀錄', ()=>{ it.logs = prevLogs; });
+    }
+  });
+}
+
+/* ================= 繪製與導航 ================= */
+function setTheme(k){
+  view.theme = k;
+  const r = document.documentElement;
+  if(k==='system') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', k);
+}
+const TITLES = {home:'換了沒', items:'物品', settings:'設定', add:'新增物品'};
+function render(){
+  const s = view.screen;
+  $('main').innerHTML =
+    s==='home' ? renderHome() :
+    s==='items' ? renderItems() :
+    s==='detail' ? renderDetail() :
+    s==='add' ? renderAdd() :
+    s==='edit' ? renderEdit() : renderSettings();
+  hydrateIcons($('main'));
+  $('title').textContent = s==='detail' ? fullName(find(view.detailId)) : s==='edit' ? '編輯物品' : TITLES[s];
+  $('back').hidden = !(s==='detail' || s==='add' || s==='edit');
+  $('fab').hidden = !(s==='home' || s==='items');
+  document.querySelectorAll('#tabs button').forEach(b=>{
+    const on = b.dataset.tab===s || ((s==='detail' || s==='edit') && b.dataset.tab===view.back);
+    b.style.color = on ? 'var(--accent)' : 'var(--ink-3)';
+    b.style.fontWeight = on ? '500' : '400';
+    b.setAttribute('aria-current', on ? 'page' : 'false');
+  });
+}
+function go(screen, id){
+  // 離開首頁就清除篩選（規格草稿 #8）：停在「正常」時，逾期的東西會被藏起來
+  if(screen!=='home') view.homeFilter = null;
+  if(screen!=='settings') view.reorderLocs = false;
+  // 從分頁（首頁／物品／設定）進入子畫面時記住來源；子畫面之間切換不覆蓋
+  const SUB = ['detail','add','edit'];
+  if(SUB.includes(screen) && !SUB.includes(view.screen)) view.back = view.screen;
+  if(id) view.detailId = id;
+  view.screen = screen;
+  render();
+  window.scrollTo(0,0);
+}
+
+document.addEventListener('click', e=>{
+  const t = e.target;
+  if(t.closest('[data-sheet]') || t.closest('#toast')) return;
+  const done = t.closest('[data-done]'); if(done){ openDone(done.dataset.done); return; }
+  const open = t.closest('[data-open]'); if(open){ go('detail', open.dataset.open); return; }
+  const tab = t.closest('[data-tab]'); if(tab){ go(tab.dataset.tab); return; }
+  const gt = t.closest('[data-goto]'); if(gt){ go(gt.dataset.goto); return; }
+  if(t.closest('#protoBtn')){ openProto(); return; }
+  if(t.closest('#back')){ go(view.screen==='edit' ? 'detail' : (view.back || 'home')); return; }
+  if(t.closest('#fab')){ F = freshForm(); go('add'); return; }
+  const th = t.closest('[data-theme-set]'); if(th){ setTheme(th.dataset.themeSet); render(); return; }
+  const last = t.closest('[data-last]'); if(last){ F.last = last.dataset.last; render(); return; }
+  const fc = t.closest('[data-fcyc]');
+  if(fc){ if(fc.dataset.fcyc==='custom') F.custom = true; else { F.custom = false; F.cycle = fc.dataset.fcyc; } F.err=''; render(); return; }
+  if(t.closest('[data-label-tg]')){ F.labelOpen = !F.labelOpen; render(); return; }
+  if(t.closest('[data-cost-tg]')){ F.costOpen = !F.costOpen; render(); return; }
+  if(t.closest('[data-add-shoot]')){ F.photo = true; F.recog = true; F.brand = '3M'; F.model = '淨呼吸 9808'; render(); return; }
+  if(t.closest('[data-add-submit]')){ submitAdd(); return; }
+  if(t.closest('#pauseBtn')){ openPause(view.detailId); return; }
+  const adj = t.closest('[data-adjust]');
+  if(adj){
+    const it = find(view.detailId), prev = it.logs[0].cycleDays;
+    it.logs[0].cycleDays = +adj.dataset.adjust;
+    render(); showToast(`目前週期改成 ${adj.dataset.adjust} 天`, ()=>{ it.logs[0].cycleDays = prev; });
+    return;
+  }
+  const pa = t.closest('[data-photo-add]');
+  if(pa){ const it = find(pa.dataset.photoAdd); openPhotoPicker('新增物品照片', ()=>{ if(it.photos<5){ it.photos++; render(); showToast('已加入照片'); } }); return; }
+  const pv = t.closest('[data-photo-view]');
+  if(pv){ const it = find(pv.dataset.photoView); openPhotoView('物品照片', ()=>{ it.photos--; render(); showToast('已刪除照片', ()=>{ it.photos++; }); }); return; }
+  if(t.closest('[data-fphoto-add]')){ openPhotoPicker('新增物品照片', ()=>{ if(F.itemPhotos<5){ F.itemPhotos++; render(); } }); return; }
+  if(t.closest('[data-fphoto-view]')){ openPhotoView('物品照片', ()=>{ F.itemPhotos--; render(); }); return; }
+  const di = t.closest('[data-del-item]'); if(di){ openDeleteItem(di.dataset.delItem); return; }
+  if(t.closest('[data-edit-lead]')){ openLeadSetting(); return; }
+  if(t.closest('[data-export]')){ openExport(); return; }
+  if(t.closest('[data-restore]')){ openRestore(); return; }
+  if(t.closest('[data-reorder]')){ view.reorderLocs = !view.reorderLocs; render(); return; }
+  const mv = t.closest('[data-move]');
+  if(mv){ const i = +mv.dataset.move, j = i + (+mv.dataset.dir); [LOCS[i], LOCS[j]] = [LOCS[j], LOCS[i]]; render(); return; }
+  const ei = t.closest('[data-edit-item]'); if(ei){ openEdit(ei.dataset.editItem); return; }
+  const elg = t.closest('[data-edit-log]'); if(elg){ openLogEdit(view.detailId, +elg.dataset.editLog); return; }
+  const ec2 = t.closest('[data-ecyc]');
+  if(ec2 && E){ if(ec2.dataset.ecyc==='custom') E.custom = true; else { E.custom = false; E.cycle = ec2.dataset.ecyc; } E.err=''; render(); return; }
+  if(t.closest('[data-edit-save]')){ saveEdit(); return; }
+  const hf = t.closest('[data-hfilter]'); if(hf){ view.homeFilter = view.homeFilter===hf.dataset.hfilter ? null : hf.dataset.hfilter; render(); return; }
+  const tg = t.closest('[data-tog]'); if(tg){ view[tg.dataset.tog] = !view[tg.dataset.tog]; render(); return; }
+  const el = t.closest('[data-edit-loc]'); if(el){ openEditPlace('loc', el.dataset.editLoc); return; }
+  const ec = t.closest('[data-edit-cat]'); if(ec){ openEditPlace('cat', ec.dataset.editCat); return; }
+  if(t.closest('[data-new-loc]')){ openEditPlace('loc', null); return; }
+  if(t.closest('[data-new-cat]')){ openEditPlace('cat', null); return; }
+  const stub = t.closest('[data-stub]'); if(stub){ showToast(`原型沒有做「${stub.dataset.stub}」`); return; }
+});
+document.addEventListener('input', e=>{
+  const f = e.target.dataset && e.target.dataset.f;
+  if(f && !e.target.closest('[data-sheet]')){ F[f] = e.target.value; if(f==='brand'||f==='model') F.recog = false; }
+});
+document.addEventListener('change', e=>{
+  const f = e.target.dataset && e.target.dataset.f;
+  if(!f || e.target.closest('[data-sheet]')) return;
+  F[f] = e.target.value;
+  // 位置、類別改變會影響「會顯示為」預覽與同位置同類別的提示
+  if(f==='loc' || f==='cat' || f==='label') render();
+});
+
+document.addEventListener('input', e=>{
+  const k = e.target.dataset && e.target.dataset.e;
+  if(k && E && !e.target.closest('[data-sheet]')) E[k] = e.target.value;
+});
+document.addEventListener('change', e=>{
+  const k = e.target.dataset && e.target.dataset.e;
+  if(!k || !E || e.target.closest('[data-sheet]')) return;
+  E[k] = e.target.value;
+  // 位置、類別、補充名稱改變會影響「會顯示為」預覽與同位置同類別的提示
+  if(k==='loc' || k==='cat' || k==='label') render();
+});
+
+/* ================= 初始化 ================= */
+$('back').innerHTML = ic('chevL',22);
+$('protoBtn').innerHTML = `${ic('sliders',13)}原型`;
+$('fab').innerHTML = ic('plus',26,2.2);
+document.querySelector('[data-tab="home"]').innerHTML = `${ic('home',21)}首頁`;
+document.querySelector('[data-tab="items"]').innerHTML = `${ic('list',21)}物品`;
+document.querySelector('[data-tab="settings"]').innerHTML = `${ic('gear',21)}設定`;
+hydrateIcons(document);
+render();
+</script>
