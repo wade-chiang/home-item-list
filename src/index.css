@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+/*
+ * 主題搬自 docs/prototype/p0.html。原型用 Tailwind v3 的 tailwind.config 物件，這裡改寫成 v4 的 @theme。
+ *
+ * 顏色與陰影用 `@theme inline`：utility 會直接輸出 var(--ground) 這類原始變數，
+ * 而不是先在 :root 解析成 --color-ground 再引用。一般 @theme 在「子元素上覆寫 --ground」時會吃不到新值，
+ * inline 則不受影響。深淺色切換只改下方 :root 上的原始變數。
+ */
+@theme inline {
+  --color-ground: var(--ground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-overdue: var(--overdue);
+  --color-overdue-soft: var(--overdue-soft);
+  --color-soon: var(--soon);
+  --color-soon-soft: var(--soon-soft);
+  --color-paused: var(--paused);
+
+  --shadow-card: var(--shadow);
+}
+
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  --font-mono: "DM Mono", ui-monospace, Menlo, "PingFang TC", "Noto Sans TC", monospace;
+}
+
+/*
+ * DM Mono 字型檔放在 repo 裡，不從 Google Fonts CDN 載入：正式版要能離線開啟（CLAUDE.md 紀律 2）。
+ * 只放 latin 子集的 400、500：原型只用到這兩個字重。中文字不在 unicode-range 內，
+ * 瀏覽器不會為它下載 DM Mono，直接交給 --font-mono 後面的系統字型。
+ * 檔案取自 @fontsource/dm-mono 5.3.0，授權 OFL 1.1（見 assets/fonts/OFL.txt）。
+ */
+@font-face {
+  font-family: "DM Mono";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url("./assets/fonts/dm-mono-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "DM Mono";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url("./assets/fonts/dm-mono-latin-500-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@layer base {
+  /* 淺色：暖調中性色。主色維持深青，暖底配青色是互補，狀態色（磚紅、赭）壓深以確保當文字用時讀得清楚 */
+  :root {
+    --ground: #F6F3EE; --surface: #FFFDF9; --surface-2: #FBF8F3;
+    --ink: #2B2520; --ink-2: #5F564F; --ink-3: #857B72;
+    --line: #E6DFD6; --line-2: #EFEAE3;
+    --accent: #0B5750; --accent-ink: #FFFFFF; --accent-soft: #E2EDE8;
+    --overdue: #B23A2E; --overdue-soft: #F7E4DF;
+    --soon: #8A5A0B; --soon-soft: #F5E8D0;
+    --paused: #A0968D;
+    --shadow: 0 1px 2px rgba(43,37,32,.06), 0 6px 16px rgba(43,37,32,.05);
+    --scrim: rgba(30,24,18,.45);
+  }
+
+  /* 深色：使用者確認過 v1 可以，維持不動。
+     跟隨系統時用 media query；使用者明確選了深色時用 data-theme，兩段數值必須相同。 */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0E1412; --surface: #18201D; --surface-2: #1E2724;
+      --ink: #E8ECE9; --ink-2: #AFBBB7; --ink-3: #85938E;
+      --line: #2A3430; --line-2: #222B28;
+      --accent: #43B3A6; --accent-ink: #08201D; --accent-soft: #12312D;
+      --overdue: #F2705F; --overdue-soft: #3A1F1B;
+      --soon: #D9A33A; --soon-soft: #332715;
+      --paused: #6E7B77;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 16px rgba(0,0,0,.3);
+      --scrim: rgba(0,0,0,.55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0E1412; --surface: #18201D; --surface-2: #1E2724;
+    --ink: #E8ECE9; --ink-2: #AFBBB7; --ink-3: #85938E;
+    --line: #2A3430; --line-2: #222B28;
+    --accent: #43B3A6; --accent-ink: #08201D; --accent-soft: #12312D;
+    --overdue: #F2705F; --overdue-soft: #3A1F1B;
+    --soon: #D9A33A; --soon-soft: #332715;
+    --paused: #6E7B77;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 16px rgba(0,0,0,.3);
+    --scrim: rgba(0,0,0,.55);
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}

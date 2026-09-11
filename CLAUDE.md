@@ -234,6 +234,8 @@ due = 最近一筆更換紀錄的日期 + 該筆的週期
 | 決定 | 理由 |
 |---|---|
 | **PocketBase（暫定，見下方退場條件）** | 這個專案的後端終將消失（P3 全部搬上裝置），所以「寫最少的鷹架」比「後端寫得漂亮」重要。PocketBase 讓後端程式碼接近零，還內建檔案上傳、on-demand 縮圖、admin 後台與備份 API |
+| **P3 不把 PocketBase 包進 app，改用裝置上的 SQLite** | 技術上可行（社群用 gomobile 編成 Android/iOS 套件，在 app 內跑一個 localhost 伺服器），但官方不支援；唯一的社群專案 pocketbase_mobile 停在 v0.24.4，2025-01 後沒更新（官方已到 v0.40.3）；Capacitor 沒有現成外掛，要自己寫 Kotlin／Swift 包裝。為了省下 P3 重寫 `src/repo/` 的成本，換來一個卡在舊版、要自己維護的原生依賴，不划算。2026-09-11 查證 |
+| **P1、P2 維持 PocketBase 網頁版，不從 P1 就做 Capacitor app** | 2026-09-11 評估過「P1 直接做 app、資料存裝置上的 SQLite」：可省掉 PocketBase、Docker、P3 的 `src/repo/` 重寫與資料搬遷；代價是 P1 就要架 Android 建置環境、沒有 admin 後台與現成縮圖。已知 PocketBase 的照片與備份功能到 P3 仍要在 app 內重做。維持現規劃的理由：想最快開始用，網頁版從骨架到手機能用的路徑最短；Android 建置（SDK、打包、安裝）的成本留到 P3 再付 |
 | **SQLite，不是 Postgres** | 單人使用沒有併發問題；備份就是複製一個目錄；資料結構直接就是未來 app 版要用的結構 |
 | **不用 Next.js** | 這個 app 用不到 SSR / RSC / SEO，而 Capacitor 需要純靜態前端會逼我們開 `output: 'export'`，把 Next.js 一半功能關掉，剩下的只是比較笨重的 React 路由器 |
 | **Capacitor，不是 React Native / Flutter** | 這個 app 是表單 + 清單 + 相機 + 本地通知，全在 Capacitor 舒適區。RN 要重寫 UI、Flutter 連資料層都要用 Dart 重寫。付出的重寫成本換來的原生手感在這個 app 上感覺不到 |
@@ -248,7 +250,8 @@ due = 最近一筆更換紀錄的日期 + 該筆的週期
 | **品牌型號沒填時留空** | 畫面比顯示「未記錄品牌」乾淨，資料本身相同。例外是成本統計依品牌分組時，空值那組要有名稱 |
 | **更換日期不限制修改，用提示條說明結果** | 這類修改很少發生，而且是使用者自己剛做的動作，結果就在眼前。用提示條說明結果並提供復原，比每次多一個確認步驟輕 |
 | **原型關卡** | 原型改一次便宜，寫進程式後再改貴好幾倍，所以畫面要先確認。但要求 P0 涵蓋所有階段的畫面，P3、P4 需求還不穩定，P0 會沒有終點，所以改成每階段開工前各自把關 |
-| **Tailwind CSS** | 手機優先的 responsive 寫起來最順，不用維護類名體系。P0 原型用 CDN 版寫，版面可以直接搬到正式版 |
+| **Tailwind CSS** | 手機優先的 responsive 寫起來最順，不用維護類名體系。P0 原型用 CDN 版（v3）寫，正式版用 v4，版面搬過來時要改少數 class：`shadow`→`shadow-sm`、`rounded`→`rounded-sm`、`outline-none`→`outline-hidden`；`border` 預設色改為 `currentColor`，要明確寫顏色 class |
+| **字型檔放進 repo，不從 CDN 載入** | 紀律 2 要求前端能離線開啟，Google Fonts CDN 在 Capacitor 離線時載不到。DM Mono 只放 latin 子集的 400、500 兩個 woff2（原型只用到這兩個字重，中文由系統字型接手），授權 OFL 1.1，授權檔放在字型旁邊 |
 | **Vitest** | 與前端同一套工具鏈，`src/shared/due.ts` 的測試不需要額外配置 |
 
 ### PocketBase 是暫定的：退場條件與成本

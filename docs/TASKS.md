@@ -40,7 +40,7 @@
 
 ### 骨架
 
-- [ ] **P1-1** 前端初始化：Vite + React + TypeScript + Tailwind
+- [x] **P1-1** 前端初始化：Vite + React + TypeScript + Tailwind
 - [ ] **P1-2** ESLint + Prettier + TypeScript 嚴格模式 + Vitest
 - [ ] **P1-3** `.gitignore` 補上 `pb_data/`、`pb_public/`
 - [ ] **P1-4** docker-compose.yml：PocketBase 單一服務
