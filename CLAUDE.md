@@ -65,15 +65,17 @@
 
 | 層 | 選擇 |
 |---|---|
-| 前端 | Vite + React + TypeScript + React Router + TanStack Query |
+| 前端 | Vite + React + TypeScript（嚴格模式）+ React Router + TanStack Query |
 | 樣式 | Tailwind CSS |
 | icon | Lucide（`lucide-react`，P1 開工時另外提案安裝）。已查證 1.44.0 可用；`Home`、`Trash2` 是舊名稱的別名，改用 `House`、`Trash` |
 | 測試 | Vitest |
+| 程式碼風格 | ESLint + Prettier |
+| 資料驗證 | zod。進出 `src/repo/` 的資料都要通過驗證（見紀律 3） |
 | 後端 | **PocketBase（暫定，見決策紀錄）**，內嵌 SQLite |
-| 部署 | 單一 container。前端 build 產物放進 `pb_public/`，由 PocketBase 一併 serve |
-| 未來 app | Capacitor（Android/iOS），資料換成裝置上的 SQLite，提醒換成本地通知 |
+| 部署 | Docker Compose，單一 container，PocketBase 版本 pin 死（見紀律 3）。前端 build 產物放進 `pb_public/`，由 PocketBase 一併 serve |
+| 未來 app | Capacitor（Android/iOS），資料換成裝置上的 SQLite（`@capacitor-community/sqlite`），提醒換成本地通知 |
 
-**新增任何依賴前先提出理由並等使用者確認**，不要自行安裝。
+**表中列的是規劃，不代表已同意安裝。** 任何依賴安裝前都要先提出理由並等使用者確認，不要自行安裝。
 
 ---
 
