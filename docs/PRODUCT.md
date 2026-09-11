@@ -52,7 +52,7 @@
 | `location` | relation → locations (required) | |
 | `category` | relation → categories (required) | |
 | `label` | text | 補充名稱，選填。同位置、同類別有兩個以上時用來區分 |
-| `leadDays` | number (required) | 提前提醒天數。新增時帶入 `settings.defaultLeadDays` |
+| `leadDays` | number（最小 0） | 提前提醒天數。新增時帶入 `settings.defaultLeadDays`。0 表示到期當天才提醒；必須有值由 repo 層把關，見 CLAUDE.md「型別要自己顧」 |
 | `note` | text | 購買通路、安裝注意事項等 |
 | `paused` | bool | |
 | `pausedUntil` | text | `YYYY-MM-DD`。暫停時**必填**，到期自動恢復 |
@@ -85,7 +85,7 @@
 | 欄位 | PB 型別 | 說明 |
 |---|---|---|
 | `householdId` | text | 保留欄位 |
-| `unitPrice` | number (required) | 元，整數 |
+| `unitPrice` | number（最小 0） | 元，整數。0 表示贈品 |
 | `quantity` | number (required) | |
 | `unit` | text | 「捲」「片」「個」 |
 | `note` | text | |
@@ -98,7 +98,7 @@
 
 ### `settings` 全域設定
 
-key-value 兩個 text 欄位。目前只有 `defaultLeadDays`（新物品預設提前提醒天數，預設 7）。
+key-value 兩個 text 欄位。目前只有 `defaultLeadDays`（新物品預設提前提醒天數，預設 7）。P1-5 的 migration 會建立 `defaultLeadDays = 7` 這一筆。
 
 ---
 
@@ -320,8 +320,8 @@ due = 最近一筆更換紀錄的 replacedOn + 該筆的 cycleDays
 | 項目 | 待何時決定 |
 |---|---|
 | 日期欄位用 `text` 還是 `date` + UTC 午夜約定 | P1-6 實測後定案，回填 §2 與 CLAUDE.md |
-| PocketBase 非必填欄位是否回傳零值 | P1-6 實測，回填 CLAUDE.md |
-| PocketBase collection 的預設 API rule | P1-6 實測，回填 CLAUDE.md |
+| PocketBase 非必填欄位是否回傳零值 | 資料庫層已確認一律存零值（v0.40.3 原始碼）；API 回傳值待 P1-6 實測，回填 CLAUDE.md |
+| PocketBase collection 的預設 API rule | `null`＝只有管理員、`""`＝任何人，已從原始碼確認；後台新建 collection 的預設值待 P1-6 實測 |
 | 淺色主題偏單調，要再調整 | 不影響開工，擇期調整 |
 | 成本統計依品牌分組時，空值那組顯示為「未填品牌」；分組前使用與型號變更判斷相同的字串整理函式 | P4 |
 | 品牌型號的空值同時代表白牌與忘了填，是否需要區分 | P4 |
