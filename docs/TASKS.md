@@ -48,7 +48,7 @@
   - `pb_data/` 掛 volume
   - 前端 `vite build` 產物放進 `pb_public/`，由 PocketBase 一併 serve
   - 完成定義：`docker compose up` 後從**手機瀏覽器**可開啟，且 React Router 的 pretty URL 直接輸入不會 404
-  - 2026-09-11 電腦上已驗證：pretty URL 不會 404、後台可進、`pb_data` 擁有者為 1000。**手機實測待補**
+  - 2026-09-11 已驗證：電腦上 pretty URL 不會 404、後台可進、`pb_data` 擁有者為 1000；手機經區網開啟首頁與 `/items/abc` 皆正常
 
 ### 資料層
 
@@ -56,12 +56,12 @@
   - 日期欄位暫定 `text`（P1-6 定案）
   - `householdId` 一併建立（保留用）
   - 完成定義：**`pb_migrations/` 進 git**
-- [ ] **P1-6** 實測並回填三個未確認事項
+- [x] **P1-6** 實測並回填三個未確認事項
   - 非必填欄位回傳 `null` 還是零值？→ 回填 CLAUDE.md「型別要自己顧」
   - 新建 collection 的預設 API rule 是鎖住還是開放？→ 回填 CLAUDE.md
   - `date` 欄位實際存成什麼格式？admin 後台用 UTC 還是瀏覽器本地時區顯示？
   - 完成定義：文件裡的 ⚠️ 標記被實測結果取代，**並在此定案日期欄位用 `text` 還是 `date`**
-- [ ] **P1-7** `src/shared/types.ts`：領域型別（手寫）
+- [x] **P1-7** `src/shared/types.ts`：領域型別（手寫）
 - [ ] **P1-8** `src/repo/`：PocketBase SDK 封裝 + zod 邊界驗證
   - 負責把 PocketBase 的空字串／零值轉成 `null`（例如未記錄的日期、沒填的品牌型號、空的採購關聯）
   - 完成定義：**這是全專案唯一 import PocketBase SDK 的目錄**
