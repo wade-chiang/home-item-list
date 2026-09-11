@@ -1,0 +1,13 @@
+services:
+  pocketbase:
+    build: .
+    # 以本機使用者（uid/gid 1000）執行：pb_migrations 裡自動產生的檔案才不會變成 root 擁有，git 操作時不會卡權限
+    user: "1000:1000"
+    ports:
+      # 開在所有網卡上，區網的手機才連得到。這台機器不可對外暴露（CLAUDE.md），路由器不要轉發這個 port
+      - "8090:8090"
+    volumes:
+      - ./pb_data:/pb/pb_data
+      # 在後台改 collection 時 PocketBase 會自動產生 migration 檔，掛出來才會進 git（CLAUDE.md 紀律 3）
+      - ./pb_migrations:/pb/pb_migrations
+    restart: unless-stopped

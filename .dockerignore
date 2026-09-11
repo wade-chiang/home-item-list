@@ -1,0 +1,18 @@
+# 本機的 node_modules 含 glibc 版原生套件（rolldown、lightningcss、tailwind oxide），不能帶進 alpine（musl）建置
+node_modules
+dist
+
+# PocketBase 的資料與 migration 由 compose 掛載，不打包進 image
+pb_data
+pb_public
+pb_migrations
+
+.git
+docs
+
+# 沙箱掛進來的空檔與個人設定（見 .gitignore）
+.claude
+.mcp.json
+.gitmodules
+.idea
+.vscode

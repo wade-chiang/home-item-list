@@ -43,15 +43,16 @@
 - [x] **P1-1** 前端初始化：Vite + React + TypeScript + Tailwind
 - [x] **P1-2** oxlint + Prettier + TypeScript 嚴格模式 + Vitest（原規劃 ESLint，因 TypeScript 7 改用 oxlint）
 - [x] **P1-3** `.gitignore` 補上 `pb_data/`、`pb_public/`
-- [ ] **P1-4** docker-compose.yml：PocketBase 單一服務
+- [x] **P1-4** docker-compose.yml：PocketBase 單一服務
   - **版本 pin 死**，不用 `latest`
   - `pb_data/` 掛 volume
   - 前端 `vite build` 產物放進 `pb_public/`，由 PocketBase 一併 serve
   - 完成定義：`docker compose up` 後從**手機瀏覽器**可開啟，且 React Router 的 pretty URL 直接輸入不會 404
+  - 2026-09-11 電腦上已驗證：pretty URL 不會 404、後台可進、`pb_data` 擁有者為 1000。**手機實測待補**
 
 ### 資料層
 
-- [ ] **P1-5** 建立 collections：`locations` / `categories` / `items` / `logs` / `purchases` / `settings`（欄位見 PRODUCT.md §2）
+- [x] **P1-5** 建立 collections：`locations` / `categories` / `items` / `logs` / `purchases` / `settings`（欄位見 PRODUCT.md §2）
   - 日期欄位暫定 `text`（P1-6 定案）
   - `householdId` 一併建立（保留用）
   - 完成定義：**`pb_migrations/` 進 git**
