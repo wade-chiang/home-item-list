@@ -1,0 +1,9 @@
+# 手寫維護的文件：Markdown 表格與原型 HTML 被 Prettier 重排的話，diff 會難以檢視
+docs/
+*.md
+.claude/
+.mcp.json
+.gitmodules
+
+# 由 pnpm 產生
+pnpm-lock.yaml

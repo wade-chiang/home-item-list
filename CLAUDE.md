@@ -69,7 +69,7 @@
 | 樣式 | Tailwind CSS |
 | icon | Lucide（`lucide-react`，P1 開工時另外提案安裝）。已查證 1.44.0 可用；`Home`、`Trash2` 是舊名稱的別名，改用 `House`、`Trash` |
 | 測試 | Vitest |
-| 程式碼風格 | ESLint + Prettier |
+| 程式碼風格 | oxlint + Prettier。oxlint 開 type-aware（需 `oxlint-tsgolint`） |
 | 資料驗證 | zod。進出 `src/repo/` 的資料都要通過驗證（見紀律 3） |
 | 後端 | **PocketBase（暫定，見決策紀錄）**，內嵌 SQLite |
 | 部署 | Docker Compose，單一 container，PocketBase 版本 pin 死（見紀律 3）。前端 build 產物放進 `pb_public/`，由 PocketBase 一併 serve |
@@ -253,6 +253,7 @@ due = 最近一筆更換紀錄的日期 + 該筆的週期
 | **Tailwind CSS** | 手機優先的 responsive 寫起來最順，不用維護類名體系。P0 原型用 CDN 版（v3）寫，正式版用 v4，版面搬過來時要改少數 class：`shadow`→`shadow-sm`、`rounded`→`rounded-sm`、`outline-none`→`outline-hidden`；`border` 預設色改為 `currentColor`，要明確寫顏色 class |
 | **字型檔放進 repo，不從 CDN 載入** | 紀律 2 要求前端能離線開啟，Google Fonts CDN 在 Capacitor 離線時載不到。DM Mono 只放 latin 子集的 400、500 兩個 woff2（原型只用到這兩個字重，中文由系統字型接手），授權 OFL 1.1，授權檔放在字型旁邊 |
 | **Vitest** | 與前端同一套工具鏈，`src/shared/due.ts` 的測試不需要額外配置 |
+| **oxlint，不用 ESLint** | TypeScript 用 7.0，而 typescript-eslint 8.70 只支援 `typescript <6.1.0`（7.0 沒有程式化 API）；要用 ESLint 得另裝 `@typescript/typescript6` 別名，編輯器與 build 會用不同 TS 版本。oxlint 的 type-aware 反而要求 TS 7.0+。代價是 type-aware 仍是 beta。2026-09-11 查證 |
 
 ### PocketBase 是暫定的：退場條件與成本
 
