@@ -1,4 +1,7 @@
-@import "tailwindcss";
+/* 只從 src/ 找 class。Tailwind 預設掃整個專案，連 docs/prototype/p0.html 原型用到的 class 都會產生進正式版 CSS
+   （實測：預設 192 個 class、21.4 kB；限定 src/ 後 26 個、10.2 kB）。
+   之後若在 src/ 以外的檔案寫 class（例如根目錄的 index.html），要另外用 @source 加入。 */
+@import "tailwindcss" source("../src");
 
 /*
  * 主題搬自 docs/prototype/p0.html。原型用 Tailwind v3 的 tailwind.config 物件，這裡改寫成 v4 的 @theme。

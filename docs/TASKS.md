@@ -62,7 +62,7 @@
   - `date` 欄位實際存成什麼格式？admin 後台用 UTC 還是瀏覽器本地時區顯示？
   - 完成定義：文件裡的 ⚠️ 標記被實測結果取代，**並在此定案日期欄位用 `text` 還是 `date`**
 - [x] **P1-7** `src/shared/types.ts`：領域型別（手寫）
-- [ ] **P1-8** `src/repo/`：PocketBase SDK 封裝 + zod 邊界驗證
+- [x] **P1-8** `src/repo/`：PocketBase SDK 封裝 + zod 邊界驗證
   - 負責把 PocketBase 的空字串／零值轉成 `null`（例如未記錄的日期、沒填的品牌型號、空的採購關聯）
   - 完成定義：**這是全專案唯一 import PocketBase SDK 的目錄**
 - [ ] **P1-9** `src/shared/due.ts`：`calcDue()`、`calcStatus()`、「最近一筆」的排序
