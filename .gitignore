@@ -2,19 +2,17 @@
 
 # dependencies
 /node_modules
-/.pnp
-.pnp.js
 
 # testing
 /coverage
 
-# next.js
-/.next/
-/out/
-
 # production
-/build
 /dist
+
+# PocketBase：資料與照片（pb_data）、前端 build 產物（pb_public）都不進 git
+# pb_migrations/ 刻意「不」排除：它是 schema 唯一的版本化紀錄（CLAUDE.md 紀律 3）
+/pb_data/
+/pb_public/
 
 # misc
 .DS_Store
@@ -22,19 +20,14 @@
 
 # debug
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+pnpm-debug.log*
 
 # local env files
 .env*.local
 .env
 
-# vercel
-.vercel
-
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 
 # 個人的 shell 與編輯器設定檔，不屬於專案。
 # 沙箱會把這些路徑掛成空檔，在沙箱內 git add 會被誤收（commit 55b93e1 就收進了 22 個空檔）。
