@@ -2,7 +2,7 @@
 // 與 pb_migrations/ 的 schema 之間沒有編譯器把關，改欄位時兩邊要一起改（CLAUDE.md「型別要自己顧」）。
 // 選填欄位沒填時一律是 null，不用空字串；定案後不要改回空字串，理由見 CLAUDE.md。
 
-/** YYYY-MM-DD 純日期字串，時區 Asia/Taipei（CLAUDE.md「日期只存日期」）。只能由 repo 層驗證後產生。 */
+/** YYYY-MM-DD 純日期字串，不帶時區（CLAUDE.md「日期只存日期」）。只能由 repo 層驗證或 src/shared/date.ts 計算後產生。 */
 export type IsoDate = string & { readonly __brand: "IsoDate" };
 
 // 各 collection 的 id 分開成不同型別：Item 同時引用位置與類別，避免兩者互相填錯。

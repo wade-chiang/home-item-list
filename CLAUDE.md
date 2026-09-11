@@ -85,6 +85,7 @@
 src/
   repo/              唯一允許 import PocketBase SDK 的地方
   shared/
+    date.ts          純日期計算（加減天數、相差天數、依裝置時區取得今天）
     due.ts           到期與狀態計算（唯一實作）
     types.ts         領域型別（手寫維護，見「型別要自己顧」）
   pages/
@@ -130,7 +131,7 @@ docs/
 
 ### 日期只存日期（欄位型別用 `text`，P1-6 定案）
 
-**不變的紀律**：`src/shared/` 與 UI 看到的日期永遠是 `YYYY-MM-DD` 字串，時區 `Asia/Taipei`。repo 層負責在邊界轉換。**這條跟欄位型別無關，不要一起推翻。**
+**不變的紀律**：`src/shared/` 與 UI 看到的日期永遠是 `YYYY-MM-DD` 字串，不帶時區。「今天」依使用者裝置的時區決定（`src/shared/date.ts` 的 `getToday()`），不寫死特定時區。repo 層負責在邊界轉換。**這條跟欄位型別無關，不要一起推翻。**
 
 *為什麼*：「今天換的」是一個日期概念，不是一個瞬間。把它當成瞬間處理，晚上打卡的紀錄就可能顯示成前一天或隔天——這種 bug 很難被發現，因為只在特定時段出現。領域層統一用純日期字串就完全繞開這件事。
 
@@ -270,6 +271,7 @@ v0.40.3 原始碼確認：rule 為 `null` 時只有管理員能存取（其他�
 | **字型檔放進 repo，不從 CDN 載入** | 紀律 2 要求前端能離線開啟，Google Fonts CDN 在 Capacitor 離線時載不到。DM Mono 只放 latin 子集的 400、500 兩個 woff2（原型只用到這兩個字重，中文由系統字型接手），授權 OFL 1.1，授權檔放在字型旁邊 |
 | **Vitest** | 與前端同一套工具鏈，`src/shared/due.ts` 的測試不需要額外配置 |
 | **oxlint，不用 ESLint** | TypeScript 用 7.0，而 typescript-eslint 8.70 只支援 `typescript <6.1.0`（7.0 沒有程式化 API）；要用 ESLint 得另裝 `@typescript/typescript6` 別名，編輯器與 build 會用不同 TS 版本。oxlint 的 type-aware 反而要求 TS 7.0+。代價是 type-aware 仍是 beta。2026-09-11 查證 |
+| **「今天」依裝置時區，不寫死 `Asia/Taipei`** | 之後想讓其他國家的使用者使用。日期本身存成不帶時區的 `YYYY-MM-DD`，只有「今天是幾號」需要時區，交給裝置決定就不必做時區設定。代價是出國時「今天」會變成當地日期 |
 
 ### PocketBase 是暫定的：退場條件與成本
 

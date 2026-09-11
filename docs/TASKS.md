@@ -65,7 +65,7 @@
 - [x] **P1-8** `src/repo/`：PocketBase SDK 封裝 + zod 邊界驗證
   - 負責把 PocketBase 的空字串／零值轉成 `null`（例如未記錄的日期、沒填的品牌型號、空的採購關聯）
   - 完成定義：**這是全專案唯一 import PocketBase SDK 的目錄**
-- [ ] **P1-9** `src/shared/due.ts`：`calcDue()`、`calcStatus()`、「最近一筆」的排序
+- [x] **P1-9** `src/shared/due.ts`：`calcDue()`、`calcStatus()`、「最近一筆」的排序
   - 完成定義：**有 Vitest 單元測試**，涵蓋：
     - 日期未記錄時走預計到期日
     - 週期取最近一筆更換紀錄
