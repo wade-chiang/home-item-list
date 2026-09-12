@@ -108,3 +108,11 @@ export async function createLog(itemId: ItemId, log: NewLog): Promise<Log> {
 export async function deleteItem(id: ItemId): Promise<void> {
   await pb.collection("items").delete(id);
 }
+
+/**
+ * 刪除一筆更換紀錄。這裡不檢查「只剩一筆時不能刪」：P1-15 只用在換好了的「復原」，
+ * 刪的是剛新增的那筆，原本的紀錄都還在。P1-18 做更換紀錄的刪除時再決定這條規則放在哪一層。
+ */
+export async function deleteLog(id: LogId): Promise<void> {
+  await pb.collection("logs").delete(id);
+}

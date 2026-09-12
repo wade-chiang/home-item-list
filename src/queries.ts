@@ -7,6 +7,7 @@ import {
 import { queryKeys } from "./queryKeys.ts";
 import {
   createItemWithFirstLog,
+  createLog,
   getSettings,
   listCategories,
   listItems,
@@ -15,6 +16,7 @@ import {
   type NewItem,
   type NewLog,
 } from "./repo/index.ts";
+import type { ItemId } from "./shared/types.ts";
 
 // 各頁共用的查詢：key 與 repo 函式在這裡綁在一起，頁面不用自己記 key。
 // 到期日是推導值，不能交給 PocketBase 排序，所以一律整批取回在前端計算（CLAUDE.md）。
@@ -47,6 +49,16 @@ export async function invalidateItemData(
     queryClient.invalidateQueries({ queryKey: queryKeys.items }),
     queryClient.invalidateQueries({ queryKey: queryKeys.logs }),
   ]);
+}
+
+/** 換好了：寫入一筆更換紀錄 */
+export function useCreateLog() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, log }: { itemId: ItemId; log: NewLog }) =>
+      createLog(itemId, log),
+    onSuccess: () => invalidateItemData(queryClient),
+  });
 }
 
 export function useCreateItemWithFirstLog() {

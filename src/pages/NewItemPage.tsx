@@ -2,6 +2,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import CyclePicker from "../components/CyclePicker.tsx";
+import FieldError from "../components/FieldError.tsx";
 import {
   chipClass,
   INPUT_CLASS,
@@ -24,7 +26,6 @@ import { getToday } from "../shared/date.ts";
 import type { Category, Item, Location } from "../shared/types.ts";
 import {
   buildNewItemSubmission,
-  CYCLE_PRESETS,
   hasDuplicate,
   initialNewItemForm,
   type LastReplaced,
@@ -41,20 +42,6 @@ const LAST_REPLACED_OPTIONS: { value: LastReplaced; label: string }[] = [
   { value: "other", label: "其他日期" },
   { value: "unknown", label: "不知道" },
 ];
-
-function FieldError({ message }: { message: string | undefined }) {
-  if (message === undefined) {
-    return null;
-  }
-  return (
-    <p
-      data-form-error
-      className="mt-1.5 text-[12.5px] leading-relaxed text-overdue"
-    >
-      {message}
-    </p>
-  );
-}
 
 /** 原型的 selectHTML()：原生下拉選單加上右側的箭頭 */
 function Select({
@@ -315,49 +302,14 @@ function NewItemForm({
         <p className={LABEL_CLASS}>
           週期 <span className="text-overdue">*</span>
         </p>
-        <div className="flex flex-wrap gap-2">
-          {CYCLE_PRESETS.map((days) => (
-            <button
-              key={days}
-              type="button"
-              onClick={() => {
-                setForm((previous) => ({
-                  ...previous,
-                  cycle: String(days),
-                  customCycle: false,
-                }));
-                clearCycleError();
-              }}
-              className={chipClass(
-                !form.customCycle && form.cycle === String(days),
-                true,
-              )}
-            >
-              {days} 天
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => {
-              set("customCycle", true);
-              clearCycleError();
-            }}
-            className={chipClass(form.customCycle)}
-          >
-            自訂
-          </button>
-        </div>
-        {form.customCycle && (
-          <input
-            type="number"
-            inputMode="numeric"
-            aria-label="自訂週期天數"
-            value={form.cycle}
-            onChange={(event) => set("cycle", event.target.value)}
-            placeholder="天數"
-            className={`${INPUT_CLASS} mt-2`}
-          />
-        )}
+        <CyclePicker
+          cycle={form.cycle}
+          customCycle={form.customCycle}
+          onChange={(next) => {
+            setForm((previous) => ({ ...previous, ...next }));
+            clearCycleError();
+          }}
+        />
         <FieldError message={errors.cycle} />
       </div>
 

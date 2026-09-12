@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import EmptyItemsState from "../components/EmptyItemsState.tsx";
 import Icon from "../components/Icon.tsx";
@@ -6,6 +7,7 @@ import PageHeader from "../components/PageHeader.tsx";
 import { DAYS_TEXT_COLOR, STRIPE_COLOR } from "../components/statusStyles.ts";
 import type { NavState } from "../navigation.ts";
 import { brandModelLine, daysText, isFilled } from "../shared/display.ts";
+import DoneSheet from "./DoneSheet.tsx";
 import { buildHomeData, type HomeData, type HomeGroup } from "./homeData.ts";
 import type { ItemEntry } from "./itemEntries.ts";
 import { useItemEntriesData } from "./useItemEntriesData.ts";
@@ -45,7 +47,15 @@ function StatTiles({ counts }: { counts: HomeData["counts"] }) {
   );
 }
 
-function ItemRow({ entry, isFirst }: { entry: ItemEntry; isFirst: boolean }) {
+function ItemRow({
+  entry,
+  isFirst,
+  onDone,
+}: {
+  entry: ItemEntry;
+  isFirst: boolean;
+  onDone: (entry: ItemEntry) => void;
+}) {
   const { item, category, latestLog, daysLeft, status } = entry;
   const urgent = status === "overdue" || status === "soon";
 
@@ -81,10 +91,9 @@ function ItemRow({ entry, isFirst }: { entry: ItemEntry; isFirst: boolean }) {
           {daysText(status, daysLeft, item.pausedUntil)}
         </span>
       </Link>
-      {/* P1-15 接上「換好了」面板前先停用 */}
       <button
         type="button"
-        disabled
+        onClick={() => onDone(entry)}
         className={`shrink-0 self-center whitespace-nowrap rounded-[10px] px-3.5 py-2.5 text-[14px] font-medium ${urgent ? "bg-accent text-accent-ink" : "bg-accent-soft text-accent"}`}
       >
         換好了
@@ -93,7 +102,13 @@ function ItemRow({ entry, isFirst }: { entry: ItemEntry; isFirst: boolean }) {
   );
 }
 
-function GroupSection({ group }: { group: HomeGroup }) {
+function GroupSection({
+  group,
+  onDone,
+}: {
+  group: HomeGroup;
+  onDone: (entry: ItemEntry) => void;
+}) {
   return (
     <section>
       <div className="mb-2.5 mt-7 flex items-center gap-2.5">
@@ -115,7 +130,12 @@ function GroupSection({ group }: { group: HomeGroup }) {
       </div>
       <div className="overflow-hidden rounded-2xl bg-surface shadow-card">
         {group.items.map((entry, index) => (
-          <ItemRow key={entry.item.id} entry={entry} isFirst={index === 0} />
+          <ItemRow
+            key={entry.item.id}
+            entry={entry}
+            isFirst={index === 0}
+            onDone={onDone}
+          />
         ))}
       </div>
     </section>
@@ -142,6 +162,8 @@ function HomeSkeleton() {
 
 function HomePage() {
   const { data: home, error, retry } = useItemEntriesData(buildHomeData);
+  // 換好了面板開著時是哪個物品；null 表示沒開
+  const [doneEntry, setDoneEntry] = useState<ItemEntry | null>(null);
 
   return (
     <>
@@ -157,11 +179,18 @@ function HomePage() {
           <>
             <StatTiles counts={home.counts} />
             {home.groups.map((group) => (
-              <GroupSection key={group.location.id} group={group} />
+              <GroupSection
+                key={group.location.id}
+                group={group}
+                onDone={setDoneEntry}
+              />
             ))}
           </>
         )}
       </main>
+      {doneEntry !== null && (
+        <DoneSheet entry={doneEntry} onClose={() => setDoneEntry(null)} />
+      )}
     </>
   );
 }

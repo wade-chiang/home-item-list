@@ -1,4 +1,5 @@
 import { ChevronRight, Pause, Pencil, Play, Trash } from "lucide-react";
+import { useState } from "react";
 import { Link, useParams } from "react-router";
 import LoadErrorState from "../components/LoadErrorState.tsx";
 import PageHeader from "../components/PageHeader.tsx";
@@ -8,6 +9,7 @@ import {
   STATUS_LABEL,
 } from "../components/statusStyles.ts";
 import { brandModelText, displayName, isFilled } from "../shared/display.ts";
+import DoneSheet from "./DoneSheet.tsx";
 import { buildItemDetailData, type HistoryRow } from "./itemDetailData.ts";
 import type { ItemEntry } from "./itemEntries.ts";
 import { useItemEntriesData } from "./useItemEntriesData.ts";
@@ -184,16 +186,22 @@ function HistoryCard({ history }: { history: HistoryRow[] }) {
   );
 }
 
-function ItemActions({ paused }: { paused: boolean }) {
+function ItemActions({
+  paused,
+  onDone,
+}: {
+  paused: boolean;
+  onDone: () => void;
+}) {
   const secondary =
     "flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface py-3 text-[14px]";
 
   return (
-    // 按鈕接上前先停用：換好了是 P1-15，編輯與刪除是 P1-17，暫停／恢復是 P2-1
+    // 還沒接上的按鈕先停用：編輯與刪除是 P1-17，暫停／恢復是 P2-1
     <div className="mt-4 grid grid-cols-3 gap-2">
       <button
         type="button"
-        disabled
+        onClick={onDone}
         className="col-span-3 rounded-xl bg-accent py-3.5 text-[15.5px] font-semibold text-accent-ink"
       >
         換好了
@@ -251,6 +259,8 @@ function ItemDetailPage() {
   const { data, error, retry } = useItemEntriesData((input) =>
     buildItemDetailData(input, itemId),
   );
+  // 換好了面板是否開著。確認後留在詳情頁，更換歷史會直接多出一筆（P1-15 確認）
+  const [doneOpen, setDoneOpen] = useState(false);
 
   // 標題是物品的顯示名稱（照原型）；資料還沒到時先顯示「物品詳情」
   const title = data?.found
@@ -281,7 +291,16 @@ function ItemDetailPage() {
             <SummaryCard entry={data.entry} />
             <InfoCard entry={data.entry} />
             <HistoryCard history={data.history} />
-            <ItemActions paused={data.entry.item.paused} />
+            <ItemActions
+              paused={data.entry.item.paused}
+              onDone={() => setDoneOpen(true)}
+            />
+            {doneOpen && (
+              <DoneSheet
+                entry={data.entry}
+                onClose={() => setDoneOpen(false)}
+              />
+            )}
           </>
         )}
       </main>
