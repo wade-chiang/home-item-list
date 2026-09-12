@@ -22,6 +22,8 @@
 
 **日期欄位用 `text`**，存 `YYYY-MM-DD` 純日期字串，並以 `pattern` 檢查格式。P1-6 實測後定案，理由見 CLAUDE.md「日期只存日期」。領域層看到的都是 `YYYY-MM-DD` 字串。
 
+**`photos` 與 `purchases` 的欄位已在 P1-5 建立，但領域型別（`src/shared/types.ts`）與 repo 層到 P2 才納入**：照片見 P2-3、採購見 P2-6。
+
 ### `locations` 位置
 
 | 欄位 | PB 型別 | 說明 |
