@@ -1,29 +1,16 @@
-import { calcDue, calcStatus, daysUntilDue, latestLog } from "../shared/due.ts";
-import type {
-  Category,
-  IsoDate,
-  Item,
-  ItemStatus,
-  Location,
-  Log,
-} from "../shared/types.ts";
+import type { Location } from "../shared/types.ts";
+import {
+  buildItemEntries,
+  type ItemEntriesInput,
+  type ItemEntry,
+} from "./itemEntries.ts";
 
 // 首頁的分組與統計。純函式，不含 React，方便單元測試。
-// 到期日與狀態一律呼叫 src/shared/due.ts，不在這裡重算（CLAUDE.md「到期日是推導值」）。
-
-/** 首頁一列需要的資料：物品本身加上推導出來的到期資訊 */
-export type HomeItem = {
-  item: Item;
-  category: Category;
-  latestLog: Log;
-  due: IsoDate;
-  daysLeft: number;
-  status: ItemStatus;
-};
+// 物品與到期資訊的組合共用 itemEntries.ts，這裡只處理首頁特有的規則。
 
 export type HomeGroup = {
   location: Location;
-  items: HomeItem[];
+  items: ItemEntry[];
   hasOverdue: boolean;
 };
 
@@ -36,67 +23,21 @@ export type HomeData = {
   activeCount: number;
 };
 
-export type HomeInput = {
-  locations: readonly Location[];
-  categories: readonly Category[];
-  items: readonly Item[];
-  logs: readonly Log[];
-  today: IsoDate;
-};
-
-export function buildHomeData({
-  locations,
-  categories,
-  items,
-  logs,
-  today,
-}: HomeInput): HomeData {
-  const logsByItem = new Map<Item["id"], Log[]>();
-  for (const log of logs) {
-    const existing = logsByItem.get(log.itemId);
-    if (existing === undefined) {
-      logsByItem.set(log.itemId, [log]);
-    } else {
-      existing.push(log);
-    }
-  }
-
-  const categoryById = new Map(
-    categories.map((category) => [category.id, category]),
-  );
-
+export function buildHomeData(input: ItemEntriesInput): HomeData {
   // 暫停的物品不出現在位置區塊（PRODUCT.md §3.2）。P2-2 會在首頁最下方常駐顯示「N 項已暫停」
-  const active = items.filter((item) => !item.paused);
-
-  const homeItems: HomeItem[] = active.map((item) => {
-    const category = categoryById.get(item.categoryId);
-    if (category === undefined) {
-      throw new Error(`物品 ${item.id} 找不到類別 ${item.categoryId}`);
-    }
-    // 物品沒有更換紀錄時，latestLog 與 calcDue 會丟出錯誤：這是資料的不變條件，要被看見而不是默默略過
-    const itemLogs = logsByItem.get(item.id) ?? [];
-    const due = calcDue(itemLogs);
-    return {
-      item,
-      category,
-      latestLog: latestLog(itemLogs),
-      due,
-      daysLeft: daysUntilDue(due, today),
-      status: calcStatus(item, due, today),
-    };
-  });
+  const active = buildItemEntries(input).filter((entry) => !entry.item.paused);
 
   const counts: HomeCounts = {
-    overdue: homeItems.filter((entry) => entry.status === "overdue").length,
-    soon: homeItems.filter((entry) => entry.status === "soon").length,
-    ok: homeItems.filter((entry) => entry.status === "ok").length,
+    overdue: active.filter((entry) => entry.status === "overdue").length,
+    soon: active.filter((entry) => entry.status === "soon").length,
+    ok: active.filter((entry) => entry.status === "ok").length,
   };
 
   // 位置照設定的順序（repo 已依 sortOrder 取回），組內依剩餘天數由少到多
-  const groups: HomeGroup[] = locations
+  const groups: HomeGroup[] = input.locations
     .map((location) => {
-      const groupItems = homeItems
-        .filter((entry) => entry.item.locationId === location.id)
+      const groupItems = active
+        .filter((entry) => entry.location.id === location.id)
         .toSorted((a, b) => a.daysLeft - b.daysLeft);
       return {
         location,

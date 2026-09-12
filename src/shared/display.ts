@@ -65,3 +65,14 @@ export function daysText(
   }
   return `還有 ${daysLeft} 天`;
 }
+
+/** 物品頁的短格式天數：「逾期 3 天」「0 天」「12 天」「暫停」（照原型的 shortDays()） */
+export function shortDaysText(status: ItemStatus, daysLeft: number): string {
+  if (status === "paused") {
+    return "暫停";
+  }
+  if (daysLeft < 0) {
+    return `逾期 ${-daysLeft} 天`;
+  }
+  return `${daysLeft} 天`;
+}

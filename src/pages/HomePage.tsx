@@ -1,36 +1,19 @@
 import { Link } from "react-router";
+import EmptyItemsState from "../components/EmptyItemsState.tsx";
 import Icon from "../components/Icon.tsx";
+import LoadErrorState from "../components/LoadErrorState.tsx";
 import PageHeader from "../components/PageHeader.tsx";
+import { DAYS_TEXT_COLOR, STRIPE_COLOR } from "../components/statusStyles.ts";
 import type { NavState } from "../navigation.ts";
-import { useCategories, useItems, useLocations, useLogs } from "../queries.ts";
-import { getToday } from "../shared/date.ts";
 import { brandModelLine, daysText, isFilled } from "../shared/display.ts";
-import type { ItemStatus } from "../shared/types.ts";
-import {
-  buildHomeData,
-  type HomeData,
-  type HomeGroup,
-  type HomeItem,
-} from "./homeData.ts";
+import { buildHomeData, type HomeData, type HomeGroup } from "./homeData.ts";
+import type { ItemEntry } from "./itemEntries.ts";
+import { useItemEntriesData } from "./useItemEntriesData.ts";
 
 // 版面照 docs/prototype/p0.html 的 renderHome()。
 // 快速篩選（點數量方塊）是 P2-10，所以數量方塊這一步不是按鈕；「N 項已暫停」是 P2-2。
 
 const FROM_HOME: NavState = { from: "home" };
-
-const STRIPE: Record<ItemStatus, string> = {
-  overdue: "var(--overdue)",
-  soon: "var(--soon)",
-  ok: "var(--line)",
-  paused: "var(--paused)",
-};
-
-const DAYS_COLOR: Record<ItemStatus, string> = {
-  overdue: "var(--overdue)",
-  soon: "var(--soon)",
-  ok: "var(--ink-2)",
-  paused: "var(--paused)",
-};
 
 const TILES = [
   {
@@ -62,7 +45,7 @@ function StatTiles({ counts }: { counts: HomeData["counts"] }) {
   );
 }
 
-function ItemRow({ entry, isFirst }: { entry: HomeItem; isFirst: boolean }) {
+function ItemRow({ entry, isFirst }: { entry: ItemEntry; isFirst: boolean }) {
   const { item, category, latestLog, daysLeft, status } = entry;
   const urgent = status === "overdue" || status === "soon";
 
@@ -72,7 +55,7 @@ function ItemRow({ entry, isFirst }: { entry: HomeItem; isFirst: boolean }) {
     >
       <span
         className="w-[3px] self-stretch rounded-full"
-        style={{ background: STRIPE[status] }}
+        style={{ background: STRIPE_COLOR[status] }}
       />
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-line-2 text-ink-2">
         <Icon name={category.icon} size={19} />
@@ -93,7 +76,7 @@ function ItemRow({ entry, isFirst }: { entry: HomeItem; isFirst: boolean }) {
         </span>
         <span
           className="mt-1 block whitespace-nowrap font-mono text-[14.5px] font-medium tabular-nums"
-          style={{ color: DAYS_COLOR[status] }}
+          style={{ color: DAYS_TEXT_COLOR[status] }}
         >
           {daysText(status, daysLeft, item.pausedUntil)}
         </span>
@@ -158,65 +141,18 @@ function HomeSkeleton() {
 }
 
 function HomePage() {
-  const locations = useLocations();
-  const categories = useCategories();
-  const items = useItems();
-  const logs = useLogs();
-  const queries = [locations, categories, items, logs];
-
-  const failed = queries.find((query) => query.error !== null);
-  const retry = () => {
-    for (const query of queries) {
-      void query.refetch();
-    }
-  };
-
-  let home: HomeData | null = null;
-  let buildError: Error | null = null;
-  if (locations.data && categories.data && items.data && logs.data) {
-    try {
-      // 物品只有幾十筆，每次 render 重算的成本可以忽略
-      home = buildHomeData({
-        locations: locations.data,
-        categories: categories.data,
-        items: items.data,
-        logs: logs.data,
-        today: getToday(),
-      });
-    } catch (error) {
-      buildError = error instanceof Error ? error : new Error(String(error));
-    }
-  }
-
-  const error = failed?.error ?? buildError;
+  const { data: home, error, retry } = useItemEntriesData(buildHomeData);
 
   return (
     <>
       <PageHeader title="換了沒" />
       <main data-page="home" className="flex-1 px-4 pb-44">
-        {error !== null && error !== undefined ? (
-          <div className="mt-10">
-            <p className="text-[15px] text-ink-2">讀取資料失敗</p>
-            <p className="mt-2 break-all font-mono text-[12.5px] text-ink-3">
-              {error.message}
-            </p>
-            <button
-              type="button"
-              onClick={retry}
-              className="mt-4 rounded-xl bg-accent px-4 py-2.5 text-[14px] font-medium text-accent-ink"
-            >
-              重新載入
-            </button>
-          </div>
+        {error !== null ? (
+          <LoadErrorState error={error} onRetry={retry} />
         ) : home === null ? (
           <HomeSkeleton />
         ) : home.activeCount === 0 ? (
-          <div className="mt-10 text-center">
-            <p className="text-[15px] text-ink-2">還沒有任何物品</p>
-            <p className="mt-2 text-[13px] text-ink-3">
-              點右下角的 ＋ 新增第一樣要管理的耗材
-            </p>
-          </div>
+          <EmptyItemsState />
         ) : (
           <>
             <StatTiles counts={home.counts} />

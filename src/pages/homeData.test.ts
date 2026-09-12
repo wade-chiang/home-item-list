@@ -175,4 +175,14 @@ describe("buildHomeData", () => {
       buildHomeData({ locations, categories, items, logs, today }),
     ).toThrow(/找不到類別/);
   });
+
+  // P1-11 原本只檢查類別，位置不存在的物品會默默從首頁消失；P1-12 改用共用的 itemEntries 後補上
+  it("找不到位置時丟出錯誤", () => {
+    const items = [item("itemA", "missing", "cat1")];
+    const logs = [log("logA", "itemA", "2026-09-10", 30)];
+
+    expect(() =>
+      buildHomeData({ locations, categories, items, logs, today }),
+    ).toThrow(/找不到位置/);
+  });
 });
