@@ -100,3 +100,11 @@ export async function createLog(itemId: ItemId, log: NewLog): Promise<Log> {
     .create(toLogRecord({ ...log, id: newRecordId() as LogId, itemId }));
   return toLog(record);
 }
+
+/**
+ * 刪除物品。PocketBase 會連帶刪除它的更換紀錄（P1-5 的 cascadeDelete）。
+ * P1-14 先用在新增後的「復原」；P1-17 的刪除物品也用這個函式。
+ */
+export async function deleteItem(id: ItemId): Promise<void> {
+  await pb.collection("items").delete(id);
+}

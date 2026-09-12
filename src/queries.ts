@@ -1,10 +1,19 @@
-import { useQuery } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { queryKeys } from "./queryKeys.ts";
 import {
+  createItemWithFirstLog,
+  getSettings,
   listCategories,
   listItems,
   listLocations,
   listLogs,
+  type NewItem,
+  type NewLog,
 } from "./repo/index.ts";
 
 // 各頁共用的查詢：key 與 repo 函式在這裡綁在一起，頁面不用自己記 key。
@@ -24,4 +33,27 @@ export function useItems() {
 
 export function useLogs() {
   return useQuery({ queryKey: queryKeys.logs, queryFn: listLogs });
+}
+
+export function useSettings() {
+  return useQuery({ queryKey: queryKeys.settings, queryFn: getSettings });
+}
+
+/** 物品或更換紀錄有變動後呼叫：首頁、物品頁、詳情頁都由這兩份資料組成，兩份一起重抓 */
+export async function invalidateItemData(
+  queryClient: QueryClient,
+): Promise<void> {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.items }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.logs }),
+  ]);
+}
+
+export function useCreateItemWithFirstLog() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ item, firstLog }: { item: NewItem; firstLog: NewLog }) =>
+      createItemWithFirstLog(item, firstLog),
+    onSuccess: () => invalidateItemData(queryClient),
+  });
 }

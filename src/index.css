@@ -144,4 +144,42 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
+
+  /* 以下搬自原型 <style> 的全域樣式：表單與提示條會用到（P1-14） */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  input[type="date"] {
+    min-height: 46px;
+  }
+  textarea {
+    resize: vertical;
+  }
+  select option {
+    color: #222;
+  }
+}
+
+/* 提示條的進場動畫，照原型的 .anim-up */
+@keyframes up {
+  from {
+    transform: translateY(14px);
+    opacity: 0.5;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@utility anim-up {
+  animation: up 0.22s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }
