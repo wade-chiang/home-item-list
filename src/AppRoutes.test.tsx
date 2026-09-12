@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it } from "vitest";
@@ -5,11 +6,18 @@ import AppRoutes from "./AppRoutes.tsx";
 import type { NavState } from "./navigation.ts";
 
 // 用 React 的伺服器端渲染檢查路由，不需要 jsdom。只檢查輸出的 HTML，不測點擊。
+// 頁面會用 TanStack Query 取資料，所以要有 QueryClientProvider。
+// 伺服器端渲染不會執行 effect，查詢不會真的發出請求，頁面停在載入中的畫面，路由與版面骨架照樣檢查得到。
 function renderAt(pathname: string, state?: NavState) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return renderToStaticMarkup(
-    <MemoryRouter initialEntries={[{ pathname, state }]}>
-      <AppRoutes />
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[{ pathname, state }]}>
+        <AppRoutes />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
