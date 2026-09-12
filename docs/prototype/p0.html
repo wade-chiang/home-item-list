@@ -380,12 +380,12 @@ function renderDetail(){
   const avg = gaps.length>=2 ? Math.round(gaps.reduce((a,b)=>a+b,0)/gaps.length) : null;
   const suggest = avg ? Math.round(avg/10)*10 : null;
 
-  let h = `<div class="mt-4 flex items-start gap-4 rounded-2xl bg-surface p-4 shadow-card">
+  let h = `<div class="mt-4 flex items-center gap-4 rounded-2xl bg-surface p-4 shadow-card">
     <div class="min-w-[76px]">
       <div class="font-mono text-[34px] font-medium leading-none tabular-nums" style="color:${st==='ok'?'var(--ink)':STTEXT[st]}">${it.paused?'—':Math.abs(l)}</div>
       <div class="nowrap mt-1.5 font-mono text-[12px] text-ink-3">${it.paused?'已暫停':l<0?'天前該換':l===0?'今天到期':'天後到期'}</div>
     </div>
-    <div class="flex-1">
+    <div class="flex-1 text-right">
       <span class="nowrap rounded-md px-2 py-0.5 font-mono text-[11.5px] ${BADGE[st]}">${STLABEL[st]}</span>
       <div class="mt-2 font-mono text-[12.5px] leading-relaxed text-ink-3">
         ${iso(due)} 到期<br>${lg.on?`上次更換 ${iso(lg.on)}`:'上次更換日期未記錄'}
