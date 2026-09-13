@@ -10,6 +10,7 @@ import {
   createItemWithFirstLog,
   createLocation,
   createLog,
+  deleteItem,
   getSettings,
   listCategories,
   listItems,
@@ -17,8 +18,9 @@ import {
   listLogs,
   type NewItem,
   type NewLog,
+  updateItemWithLatestLog,
 } from "./repo/index.ts";
-import type { ItemId } from "./shared/types.ts";
+import type { Item, ItemId, Log } from "./shared/types.ts";
 
 // 各頁共用的查詢：key 與 repo 函式在這裡綁在一起，頁面不用自己記 key。
 // 到期日是推導值，不能交給 PocketBase 排序，所以一律整批取回在前端計算（CLAUDE.md）。
@@ -81,6 +83,24 @@ export function useCreateLog() {
       createLog(itemId, log),
     onSuccess: () => invalidateItemData(queryClient),
   });
+}
+
+/** 編輯物品：寫回物品與最近一筆更換紀錄 */
+export function useUpdateItemWithLatestLog() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ item, latestLog }: { item: Item; latestLog: Log }) =>
+      updateItemWithLatestLog(item, latestLog),
+    onSuccess: () => invalidateItemData(queryClient),
+  });
+}
+
+/**
+ * 刪除物品。成功後的重抓交給呼叫端，在換頁之後才做：
+ * 這裡若先等重抓完成，詳情頁會在換頁前閃一下「找不到這個物品」。
+ */
+export function useDeleteItem() {
+  return useMutation({ mutationFn: deleteItem });
 }
 
 export function useCreateItemWithFirstLog() {

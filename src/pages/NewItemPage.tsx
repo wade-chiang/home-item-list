@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import CyclePicker from "../components/CyclePicker.tsx";
@@ -12,6 +12,7 @@ import {
 import LoadErrorState from "../components/LoadErrorState.tsx";
 import PageHeader from "../components/PageHeader.tsx";
 import SectionDivider from "../components/SectionDivider.tsx";
+import Select from "../components/Select.tsx";
 import { useToast } from "../components/toastContext.ts";
 import {
   invalidateItemData,
@@ -42,39 +43,6 @@ const LAST_REPLACED_OPTIONS: { value: LastReplaced; label: string }[] = [
   { value: "other", label: "其他日期" },
   { value: "unknown", label: "不知道" },
 ];
-
-/** 原型的 selectHTML()：原生下拉選單加上右側的箭頭 */
-function Select({
-  id,
-  value,
-  options,
-  onChange,
-}: {
-  id: string;
-  value: string;
-  options: readonly { id: string; name: string }[];
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="relative">
-      <select
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={`${INPUT_CLASS} appearance-none pr-9`}
-      >
-        {options.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.name}
-          </option>
-        ))}
-      </select>
-      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-3">
-        <ChevronDown size={16} strokeWidth={1.75} aria-hidden />
-      </span>
-    </div>
-  );
-}
 
 function NewItemForm({
   locations,
@@ -346,7 +314,7 @@ function NewItemForm({
           rows={3}
           value={form.note}
           onChange={(event) => set("note", event.target.value)}
-          placeholder="購買通路、安裝注意事項…"
+          placeholder="安裝位置、機身型號等注意事項…"
           className={`${INPUT_CLASS} leading-relaxed`}
         />
       </div>

@@ -1,6 +1,7 @@
 import { ChevronRight, Pause, Pencil, Play, Trash } from "lucide-react";
 import { useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useLocation, useParams } from "react-router";
+import ItemNotFound from "../components/ItemNotFound.tsx";
 import LoadErrorState from "../components/LoadErrorState.tsx";
 import PageHeader from "../components/PageHeader.tsx";
 import {
@@ -9,6 +10,7 @@ import {
   STATUS_LABEL,
 } from "../components/statusStyles.ts";
 import { brandModelText, displayName, isFilled } from "../shared/display.ts";
+import DeleteItemSheet from "./DeleteItemSheet.tsx";
 import DoneSheet from "./DoneSheet.tsx";
 import { buildItemDetailData, type HistoryRow } from "./itemDetailData.ts";
 import type { ItemEntry } from "./itemEntries.ts";
@@ -187,17 +189,23 @@ function HistoryCard({ history }: { history: HistoryRow[] }) {
 }
 
 function ItemActions({
+  itemId,
   paused,
   onDone,
+  onDelete,
 }: {
+  itemId: string;
   paused: boolean;
   onDone: () => void;
+  onDelete: () => void;
 }) {
+  // 編輯頁沿用詳情頁收到的來源分頁，下方分頁的亮起位置才不會跑掉
+  const location = useLocation();
   const secondary =
     "flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface py-3 text-[14px]";
 
   return (
-    // 還沒接上的按鈕先停用：編輯與刪除是 P1-17，暫停／恢復是 P2-1
+    // 還沒接上的按鈕先停用：暫停／恢復是 P2-1
     <div className="mt-4 grid grid-cols-3 gap-2">
       <button
         type="button"
@@ -214,11 +222,19 @@ function ItemActions({
         )}
         {paused ? "恢復" : "暫停"}
       </button>
-      <button type="button" disabled className={secondary}>
+      <Link
+        to={`/items/${itemId}/edit`}
+        state={location.state}
+        className={secondary}
+      >
         <Pencil size={16} strokeWidth={1.75} aria-hidden />
         編輯
-      </button>
-      <button type="button" disabled className={`${secondary} text-overdue`}>
+      </Link>
+      <button
+        type="button"
+        onClick={onDelete}
+        className={`${secondary} text-overdue`}
+      >
         <Trash size={16} strokeWidth={1.75} aria-hidden />
         刪除
       </button>
@@ -236,24 +252,6 @@ function DetailSkeleton() {
   );
 }
 
-/** 網址裡的物品不存在時（id 打錯或剛被刪除）。原型沒有這個狀態 */
-function ItemNotFound() {
-  return (
-    <div className="mt-10">
-      <p className="text-[15px] text-ink-2">找不到這個物品</p>
-      <p className="mt-2 text-[13px] text-ink-3">
-        可能已經被刪除，或網址有誤。
-      </p>
-      <Link
-        to="/items"
-        className="mt-3 inline-block text-[14px] text-accent underline underline-offset-4"
-      >
-        回物品頁
-      </Link>
-    </div>
-  );
-}
-
 function ItemDetailPage() {
   const { itemId = "" } = useParams();
   const { data, error, retry } = useItemEntriesData((input) =>
@@ -261,6 +259,7 @@ function ItemDetailPage() {
   );
   // 換好了面板是否開著。確認後留在詳情頁，更換歷史會直接多出一筆（P1-15 確認）
   const [doneOpen, setDoneOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   // 標題是物品的顯示名稱（照原型）；資料還沒到時先顯示「物品詳情」
   const title = data?.found
@@ -292,13 +291,22 @@ function ItemDetailPage() {
             <InfoCard entry={data.entry} />
             <HistoryCard history={data.history} />
             <ItemActions
+              itemId={itemId}
               paused={data.entry.item.paused}
               onDone={() => setDoneOpen(true)}
+              onDelete={() => setDeleteOpen(true)}
             />
             {doneOpen && (
               <DoneSheet
                 entry={data.entry}
                 onClose={() => setDoneOpen(false)}
+              />
+            )}
+            {deleteOpen && (
+              <DeleteItemSheet
+                entry={data.entry}
+                logs={data.history.map((row) => row.log)}
+                onClose={() => setDeleteOpen(false)}
               />
             )}
           </>

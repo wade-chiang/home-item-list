@@ -122,6 +122,49 @@ export async function createItemWithFirstLog(
   };
 }
 
+/**
+ * 編輯物品：物品與最近一筆更換紀錄放在同一個 batch，任一筆失敗兩筆都不會改（PRODUCT.md §4.5）。
+ * 存檔後的「復原」也用這個函式，把兩筆改回編輯前的值。
+ */
+export async function updateItemWithLatestLog(
+  item: Item,
+  latestLog: Log,
+): Promise<{ item: Item; latestLog: Log }> {
+  // id 放在網址上，不放進內容；建立時間由 PocketBase 管理，不送出
+  const { id: itemId, ...itemBody } = toItemRecord(item);
+  const { id: logId, ...logBody } = toLogRecord(latestLog);
+  const batch = pb.createBatch();
+  batch.collection("items").update(itemId, itemBody);
+  batch.collection("logs").update(logId, logBody);
+  const [itemResult, logResult] = await batch.send();
+  return {
+    item: toItem(itemResult.body),
+    latestLog: toLog(logResult.body),
+  };
+}
+
+/**
+ * 刪除物品後的「復原」：用原本的 id，把物品和它所有的更換紀錄放在同一個 batch 建立回去。
+ *
+ * - batch 上限調成 1000（migration 1789276263），更換紀錄 999 筆以內都能復原；超過時 PocketBase 會拒絕，整批不寫入
+ * - 更換紀錄的建立時間（createdAt）是 PocketBase 的 autodate，無法寫入，會變成復原當下。
+ *   依原本的建立順序由舊到新送出，盡量維持「同一天多筆時較晚建立的較新」，但時間可能相同，先後不保證
+ */
+export async function restoreItemWithLogs(
+  item: Item,
+  logs: readonly Log[],
+): Promise<void> {
+  const batch = pb.createBatch();
+  batch.collection("items").create(toItemRecord(item));
+  const oldestFirst = logs.toSorted((a, b) =>
+    a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0,
+  );
+  for (const log of oldestFirst) {
+    batch.collection("logs").create(toLogRecord(log));
+  }
+  await batch.send();
+}
+
 /** 換好了：為物品寫入一筆更換紀錄 */
 export async function createLog(itemId: ItemId, log: NewLog): Promise<Log> {
   const record = await pb
@@ -132,7 +175,7 @@ export async function createLog(itemId: ItemId, log: NewLog): Promise<Log> {
 
 /**
  * 刪除物品。PocketBase 會連帶刪除它的更換紀錄（P1-5 的 cascadeDelete）。
- * P1-14 先用在新增後的「復原」；P1-17 的刪除物品也用這個函式。
+ * 新增後的「復原」（P1-14）與刪除物品（P1-17）都用這個函式。
  */
 export async function deleteItem(id: ItemId): Promise<void> {
   await pb.collection("items").delete(id);

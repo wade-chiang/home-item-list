@@ -1,5 +1,5 @@
 import { ChevronLeft } from "lucide-react";
-import { useLocation, useNavigate } from "react-router";
+import { useGoBack } from "../navigation.ts";
 
 type Props = {
   title: string;
@@ -8,17 +8,7 @@ type Props = {
 };
 
 function PageHeader({ title, backTo }: Props) {
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const goBack = (fallback: string) => {
-    // 直接輸入網址進來時 location.key 是 "default"，沒有上一頁可回（P1-10 實測）
-    if (location.key === "default") {
-      void navigate(fallback);
-    } else {
-      void navigate(-1);
-    }
-  };
+  const goBack = useGoBack();
 
   return (
     <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-line bg-ground px-4 pb-2.5 pt-3.5">
