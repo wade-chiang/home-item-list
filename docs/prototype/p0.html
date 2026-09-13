@@ -166,12 +166,12 @@ const cat = id=>CATS.find(c=>c.id===id);
 function mk(id, locId, catId, o){
   const first = o.unknown
     ? {on:null, expectedDue:addDays(today,o.left), cycleDays:o.cycle, brand:o.brand||'', model:o.model||'', photos:0, purchase:null}
-    : {on:addDays(today,o.left-o.cycle), cycleDays:o.cycle, brand:o.brand||'', model:o.model||'', photos:o.lastPhotos||0, purchase:o.lastPurchase||null};
+    : {on:addDays(today,o.left-o.cycle), cycleDays:o.cycle, brand:o.brand||'', model:o.model||'', photos:o.lastPhotos||0, purchase:o.lastPurchase||null, note:o.lastNote||''};
   const logs = [first];
   let cur = first.on;
   (o.history||[]).forEach(h=>{
     cur = addDays(cur,-h.gap);
-    logs.push({on:cur, cycleDays:h.cycle, brand:h.brand, model:h.model, photos:h.photos||0, purchase:h.purchase||null});
+    logs.push({on:cur, cycleDays:h.cycle, brand:h.brand, model:h.model, photos:h.photos||0, purchase:h.purchase||null, note:h.note||''});
   });
   return {id, loc:locId, cat:catId, label:o.label||'', leadDays:o.lead??7, note:o.note||'',
     photos:o.photos||0, paused:!!o.paused, pausedUntil:o.pausedUntil||null, logs};
@@ -180,8 +180,10 @@ const ITEMS = [
   mk('lr-ac','lr','ac',{cycle:90,left:-12,brand:'3M',model:'淨呼吸 9808',photos:2,lastPhotos:1,
     note:'機身型號 RAS-50NJ，濾網在上蓋掀開處',
     history:[
-      {gap:112,cycle:90,brand:'3M',model:'淨呼吸 9808',photos:1,purchase:{unitPrice:400, qty:1, unit:'捲'}},
-      {gap:130,cycle:90,brand:'',model:'',purchase:{unitPrice:150, qty:1, unit:'片'}},
+      {gap:112,cycle:90,brand:'3M',model:'淨呼吸 9808',photos:1,purchase:{unitPrice:400, qty:1, unit:'捲'},
+        note:'好市多買的，一捲剪五片'},
+      {gap:130,cycle:90,brand:'',model:'',purchase:{unitPrice:150, qty:1, unit:'片'},
+        note:'3M 缺貨，先用五金行的白牌\n濾網比較薄，三個月就黑了'},
       {gap:112,cycle:90,brand:'3M',model:'淨呼吸 9808',photos:1,purchase:{unitPrice:380, qty:1, unit:'捲'}},
     ]}),
   mk('lr-ap','lr','ap',{cycle:180,left:41,lead:14,brand:'Blueair',model:'205 替換濾網'}),
@@ -445,6 +447,7 @@ function renderDetail(){
             ${modelChanged?`<span class="nowrap inline-flex items-center gap-1 rounded bg-soon-soft px-1.5 py-0.5 text-[11px] text-soon">${ic('swap',12,2)}型號變更</span>`:''}
             ${cycleChanged?`<span class="nowrap rounded bg-soon-soft px-1.5 py-0.5 text-[11px] text-soon">週期 ${older.cycleDays} → ${x.cycleDays}</span>`:''}
           </div>
+          ${x.note?`<p class="mt-1 whitespace-pre-line break-words text-[12.5px] leading-relaxed text-ink-2">${esc(x.note)}</p>`:''}
           ${(x.photos || (view.showPrice && x.purchase) || (!x.on && x.expectedDue))?`<div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-ink-3">
             ${x.photos?`<span class="nowrap inline-flex items-center gap-1">${ic('camera',13)}耗材照片 ${x.photos} 張</span>`:''}
             ${(view.showPrice && x.purchase)?`<span class="nowrap font-mono">${esc(purchaseText(x.purchase))}</span>`:''}
@@ -541,7 +544,7 @@ function renderAdd(){
   </div>
 
   <div class="mt-4"><label class="${LBL}">備註</label>
-    <textarea data-f="note" rows="3" placeholder="購買通路、安裝注意事項…" class="${INP} leading-relaxed">${esc(F.note)}</textarea>
+    <textarea data-f="note" rows="3" placeholder="安裝位置、機身型號等注意事項…" class="${INP} leading-relaxed">${esc(F.note)}</textarea>
   </div>
 
   <div class="mt-4"><label class="${LBL}">物品照片 <span class="font-normal text-ink-3">機身、型號貼紙、濾網裝在哪</span></label>
@@ -697,7 +700,7 @@ function openDone(id){
   const it = find(id), last = it.logs[0];
   const s = {date:'today', dateVal:iso(today), brand:last.brand, model:last.model,
     cycle:String(last.cycleDays), custom:!PRE.includes(last.cycleDays),
-    photo:false, recog:false, bought:false, price:'', qty:'1', unit:'', err:false};
+    photo:false, recog:false, bought:false, price:'', qty:'1', unit:'', note:'', err:false};
   const {scrim, body, close} = makeSheet();
   const same = ()=>s.brand.trim()===last.brand && s.model.trim()===last.model;
   const bmHint = ()=> s.recog ? '已從包裝照片辨識，可修改（原型模擬）'
@@ -736,6 +739,11 @@ function openDone(id){
       </div>
       ${s.custom?`<input type="number" inputmode="numeric" data-k="cycle" value="${esc(s.cycle)}" placeholder="天數" class="${INP} mt-2">`:''}
       <p class="mt-1.5 font-mono text-[11.5px] ${String(last.cycleDays)===String(s.cycle)?'text-ink-3':'text-soon'}">${String(last.cycleDays)===String(s.cycle)?'沿用上次':`與上次不同（上次 ${last.cycleDays} 天）`}</p>
+    </div>
+
+    <!-- 備註記在這次的更換紀錄上，不預填上一次：通路與狀況每次不同，預填容易把舊內容又存一次 -->
+    <div class="mt-3"><label class="${LBL}">備註</label>
+      <textarea data-k="note" rows="2" placeholder="選填，例如購買通路、這次的狀況…" class="${INP} leading-relaxed">${esc(s.note)}</textarea>
     </div>
 
     ${view.showPrice?`
@@ -777,7 +785,7 @@ function openDone(id){
       const prev = {logs:it.logs.slice(), paused:it.paused, pausedUntil:it.pausedUntil};
       const newLog = {
         on: s.date==='today' ? new Date(today) : parseISO(s.dateVal),
-        cycleDays:cyc, brand:s.brand.trim(), model:s.model.trim(), photos:s.photo?1:0,
+        cycleDays:cyc, brand:s.brand.trim(), model:s.model.trim(), photos:s.photo?1:0, note:s.note.trim(),
         purchase:(view.showPrice && s.bought && s.price) ? {unitPrice:+s.price, qty:+s.qty||1, unit:s.unit||'個'} : null,
         seq: nextSeq(it),
       };
@@ -839,7 +847,7 @@ function openProto(){
   const screens = [
     ['首頁','home'],
     ['物品（依類別分組）','items'],
-    ['詳情：客廳 · 冷氣濾網','detail:lr-ac','型號變更、實際間隔回饋'],
+    ['詳情：客廳 · 冷氣濾網','detail:lr-ac','型號變更、實際間隔回饋、更換紀錄的備註'],
     ['詳情：主臥 · 冷氣濾網','detail:mb-ac','週期從 90 天改成 60 天'],
     ['詳情：浴室 · 濾心 · 蓮蓬頭','detail:ba-ft','日期未記錄、只有一筆紀錄（不能刪）'],
     ['詳情：陽台 · 洗衣機濾網','detail:bc-wm','沒填品牌型號，按「編輯」補上'],
@@ -1129,7 +1137,7 @@ function renderEdit(){
       <span class="nowrap text-[14px] text-ink-2">天前開始提醒</span>
     </div></div>
   <div class="mt-4"><label class="${LBL}">備註</label>
-    <textarea data-e="note" rows="3" placeholder="購買通路、安裝注意事項…" class="${INP} leading-relaxed">${esc(E.note)}</textarea></div>
+    <textarea data-e="note" rows="3" placeholder="安裝位置、機身型號等注意事項…" class="${INP} leading-relaxed">${esc(E.note)}</textarea></div>
   <div class="mt-4"><label class="${LBL}">物品照片 <span class="font-normal text-ink-3">機身、型號貼紙 · 最多 5 張</span></label>
     <div class="flex flex-wrap gap-2">
       ${Array.from({length:it.photos},()=>`<button data-photo-view="${it.id}" aria-label="檢視照片" class="grid h-16 w-16 place-items-center rounded-xl border border-line bg-line-2 text-ink-3">${ic('image',20)}</button>`).join('')}
@@ -1158,7 +1166,7 @@ function openLogEdit(itemId, idx){
   const pu = lg.purchase;
   const s = {hasDate:!!lg.on, date:lg.on?iso(lg.on):iso(today), brand:lg.brand, model:lg.model,
     cycle:String(lg.cycleDays), custom:!PRE.includes(lg.cycleDays), photos:lg.photos||0,
-    bought:!!pu, price:pu?String(pu.unitPrice):'', qty:pu?String(pu.qty):'1', unit:pu?pu.unit:'', err:''};
+    bought:!!pu, price:pu?String(pu.unitPrice):'', qty:pu?String(pu.qty):'1', unit:pu?pu.unit:'', note:lg.note||'', err:''};
   const {scrim, body, close} = makeSheet();
   const draw = ()=>{
     body.innerHTML = `
@@ -1199,6 +1207,10 @@ function openLogEdit(itemId, idx){
       </div>
     </div>
 
+    <div class="mt-3"><label class="${LBL}">備註</label>
+      <textarea data-k="note" rows="2" placeholder="選填，例如購買通路、這次的狀況…" class="${INP} leading-relaxed">${esc(s.note)}</textarea>
+    </div>
+
     ${view.showPrice?`
     <button data-bought class="mt-4 flex w-full items-center gap-2.5 rounded-xl border border-line px-3.5 py-3 text-left text-[14px]">
       <span class="grid h-5 w-5 shrink-0 place-items-center rounded-md border ${s.bought?'border-accent bg-accent text-accent-ink':'border-line'}">${s.bought?ic('check',14,2.5):''}</span>
@@ -1231,7 +1243,7 @@ function openLogEdit(itemId, idx){
       if(!(cyc>0)){ s.err = '請填週期天數'; return draw(); }
       const prevLogs = it.logs.map(x=>({...x}));
       const before = {latest:it.logs[0], due:calcDue(it)};
-      Object.assign(lg, {brand:s.brand.trim(), model:s.model.trim(), cycleDays:cyc, photos:s.photos,
+      Object.assign(lg, {brand:s.brand.trim(), model:s.model.trim(), cycleDays:cyc, photos:s.photos, note:s.note.trim(),
         purchase:(s.bought && s.price) ? {unitPrice:+s.price, qty:+s.qty||1, unit:s.unit||'個'} : null});
       if(s.hasDate){ lg.on = parseISO(s.date); delete lg.expectedDue; }
       // 改了日期要依日期重新排序：日期最新的那筆就是「最近一次」。

@@ -61,7 +61,9 @@ export async function createCategory(place: NewPlace): Promise<Category> {
 }
 
 /**
- * 刪除位置。還有物品屬於它時 PocketBase 會拒絕（relation 必填且不連帶刪除，P1-5）。
+ * 刪除位置。還有物品屬於它時 PocketBase 會拒絕，回 400
+ * 「Failed to delete record. Make sure that the record is not part of a required relation reference.」
+ * （relation 必填且不連帶刪除，P1-5；2026-09-13 實測）。
  * P1-15a 只用在新增後的「復原」；P2-11 的刪除位置也用這個函式。
  */
 export async function deleteLocation(id: LocationId): Promise<void> {
