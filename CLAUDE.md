@@ -85,6 +85,7 @@
 src/
   repo/              唯一允許 import PocketBase SDK 的地方
   shared/
+    brandModel.ts    品牌型號比較前的字串整理（唯一實作，見「品牌型號的比較只能有一份字串整理」）
     date.ts          純日期計算（加減天數、相差天數、依裝置時區取得今天）
     due.ts           到期與狀態計算（唯一實作）
     types.ts         領域型別（手寫維護，見「型別要自己顧」）

@@ -1,8 +1,10 @@
 import type {
   Category,
+  CategoryId,
   Item,
   ItemId,
   Location,
+  LocationId,
   Log,
   LogId,
   Settings,
@@ -44,6 +46,31 @@ export async function listCategories(): Promise<Category[]> {
     .collection("categories")
     .getFullList({ sort: "sortOrder" });
   return records.map(toCategory);
+}
+
+/** 新增位置或類別的輸入：id 由 PocketBase 產生 */
+export type NewPlace = Pick<Location, "name" | "icon" | "sortOrder">;
+
+// 位置、類別的欄位名稱與領域型別相同，也沒有選填欄位要轉換，所以直接送出。householdId 不寫（CLAUDE.md「明確不做」）
+export async function createLocation(place: NewPlace): Promise<Location> {
+  return toLocation(await pb.collection("locations").create(place));
+}
+
+export async function createCategory(place: NewPlace): Promise<Category> {
+  return toCategory(await pb.collection("categories").create(place));
+}
+
+/**
+ * 刪除位置。還有物品屬於它時 PocketBase 會拒絕（relation 必填且不連帶刪除，P1-5）。
+ * P1-15a 只用在新增後的「復原」；P2-11 的刪除位置也用這個函式。
+ */
+export async function deleteLocation(id: LocationId): Promise<void> {
+  await pb.collection("locations").delete(id);
+}
+
+/** 刪除類別。規則同 deleteLocation */
+export async function deleteCategory(id: CategoryId): Promise<void> {
+  await pb.collection("categories").delete(id);
 }
 
 export async function listItems(): Promise<Item[]> {

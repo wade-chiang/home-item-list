@@ -6,7 +6,9 @@ import {
 } from "@tanstack/react-query";
 import { queryKeys } from "./queryKeys.ts";
 import {
+  createCategory,
   createItemWithFirstLog,
+  createLocation,
   createLog,
   getSettings,
   listCategories,
@@ -49,6 +51,26 @@ export async function invalidateItemData(
     queryClient.invalidateQueries({ queryKey: queryKeys.items }),
     queryClient.invalidateQueries({ queryKey: queryKeys.logs }),
   ]);
+}
+
+/** 新增位置：成功後只需重抓位置 */
+export function useCreateLocation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createLocation,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.locations }),
+  });
+}
+
+/** 新增類別：成功後只需重抓類別 */
+export function useCreateCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createCategory,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories }),
+  });
 }
 
 /** 換好了：寫入一筆更換紀錄 */

@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import CyclePicker from "../components/CyclePicker.tsx";
 import FieldError from "../components/FieldError.tsx";
 import {
@@ -390,6 +390,12 @@ function NoPlacesState() {
       <p className="mt-2 text-[13px] leading-relaxed text-ink-3">
         新增物品時要選擇位置與類別，目前還沒有任何位置或類別。
       </p>
+      <Link
+        to="/settings"
+        className="mt-3 inline-block text-[14px] text-accent underline underline-offset-4"
+      >
+        到設定新增
+      </Link>
     </div>
   );
 }
