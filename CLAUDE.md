@@ -72,6 +72,7 @@
 | 程式碼風格 | oxlint + Prettier。oxlint 開 type-aware（需 `oxlint-tsgolint`） |
 | 資料驗證 | zod。進出 `src/repo/` 的資料都要通過驗證（見紀律 3） |
 | 拖曳排序 | `@dnd-kit/react`（0.x，版本範圍 `^0.5.0`，不主動升級）。拖曳程式集中在 `src/pages/LocationReorderList.tsx` |
+| zip 打包 | `fflate`（0.x，版本範圍 `^0.8.3`，不主動升級）。壓縮程式集中在 `src/backup/zipFile.ts` |
 | 後端 | **PocketBase（暫定，見決策紀錄）**，內嵌 SQLite |
 | 部署 | Docker Compose，單一 container，PocketBase 版本 pin 死（見紀律 3）。前端 build 產物放進 `pb_public/`，由 PocketBase 一併 serve |
 | 未來 app | Capacitor（Android/iOS），資料換成裝置上的 SQLite（`@capacitor-community/sqlite`），提醒換成本地通知 |
@@ -94,6 +95,7 @@ src/
   components/
   preferences.ts     這支手機自己的偏好（外觀、物品 icon 顯示），存在 localStorage，不是資料庫的資料，所以不在 repo/
   photoFile.ts       上傳前把照片縮小並轉成 JPEG（瀏覽器 canvas，不是資料存取，所以不在 repo/）
+  backup/            匯出與還原備份：格式、zip、存檔（存檔在 P3 要換成 Capacitor 外掛）
 pb_migrations/       PocketBase collection 定義（**進 git**）
 pb_public/           前端 build 產物（不進 git）
 pb_data/             PocketBase 資料與照片（volume，不進 git）
@@ -233,11 +235,12 @@ v0.40.3 原始碼確認：rule 為 `null` 時只有管理員能存取（其他�
 
 無論預設為何，**這台機器不可對外暴露**。目前沒有 auth，任何能連到區網的裝置都能讀寫全部資料。
 
-### PocketBase 有三個預設值要改
+### PocketBase 有幾個預設值要改
 
 - **batch API 預設關閉**（v0.40.3 原始碼 `Batch.Enabled: false`）。「新增物品同時寫入第一筆更換紀錄」需要在同一個交易完成，所以由 migration 開啟。batch 內的請求拿不到前一個請求建立的 id，物品 id 由前端先產生（15 個 `[a-z0-9]` 字元），更換紀錄才能引用它
 - **JS SDK 會自動取消重複的請求**：同一個方法＋路徑還在等回應時，前一個會被取消並丟出錯誤。`listLogs` 與 `listLogsByItem` 打的是同一個路徑，同時發出就會互相取消，所以 `src/repo/client.ts` 關掉這個功能
 - **batch 一次最多 50 個請求（v0.40.3 預設）**：刪除物品後的「復原」要把物品和所有更換紀錄放在同一個 batch 寫回，由 migration 調成 1000，也就是更換紀錄 999 筆以內可以復原（2026-09-13 以 999 筆實測，沒有超過 3 秒的交易逾時）。這個限制只存在 PocketBase 期間，P3 換成裝置 SQLite 後改用本機交易，沒有這個上限
+- **batch 交易逾時 3 秒**（v0.40.3 預設）：還原備份要在同一個 batch 清空並寫回全部資料與照片，由 migration 調成 30 秒
 
 ### 每個物品至少一筆更換紀錄
 
@@ -284,6 +287,8 @@ docker compose up -d --build
 
 ### 備份 `pb_data`
 
+伺服器每天台北 03:00 自動備份到 `pb_data/backups`，保留 7 份；但跟資料在同一個資料夾，手動複製到別處仍要做。
+
 先停容器，避免複製到寫到一半的資料庫。備份不要放 `/ramdisk`，重開機會消失。
 
 ```sh
@@ -326,6 +331,7 @@ docker compose start
 | **Vitest** | 與前端同一套工具鏈，`src/shared/due.ts` 的測試不需要額外配置 |
 | **oxlint，不用 ESLint** | TypeScript 用 7.0，而 typescript-eslint 8.70 只支援 `typescript <6.1.0`（7.0 沒有程式化 API）；要用 ESLint 得另裝 `@typescript/typescript6` 別名，編輯器與 build 會用不同 TS 版本。oxlint 的 type-aware 反而要求 TS 7.0+。代價是 type-aware 仍是 beta。2026-09-11 查證 |
 | **拖曳排序用 `@dnd-kit/react`，不用舊版 `@dnd-kit/core`** | 舊版 2024-12 後沒有新版；新版宣告支援 React 19 且持續開發，代價是 0.x 可能有破壞性改版，所以拖曳程式集中在一個檔案，換套件時只改那裡。不另裝 `@dnd-kit/helpers`，排序搬移自己寫（`moveItem`）。2026-09-15 查證 |
+| **備份用 app 自己的格式，不用 PocketBase 備份 API** | 備份 API 需要超級管理員登入，前端沒有登入；PocketBase 的備份檔是它的 SQLite 資料庫，P3 換成裝置 SQLite 後讀不了。自己的格式（zip：JSON＋照片）不用登入，P3-6 也能沿用。2026-09-15 決定 |
 | **「今天」依裝置時區，不寫死 `Asia/Taipei`** | 之後想讓其他國家的使用者使用。日期本身存成不帶時區的 `YYYY-MM-DD`，只有「今天是幾號」需要時區，交給裝置決定就不必做時區設定。代價是出國時「今天」會變成當地日期 |
 
 ### PocketBase 是暫定的：退場條件與成本

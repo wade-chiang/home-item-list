@@ -22,16 +22,18 @@ import {
   useCategories,
   useItems,
   useLocations,
+  useLogs,
   useSettings,
 } from "../queries.ts";
 import type { Category, Item, Location } from "../shared/types.ts";
 import DefaultLeadSheet from "./DefaultLeadSheet.tsx";
+import ExportBackupSheet from "./ExportBackupSheet.tsx";
 import LocationReorderList from "./LocationReorderList.tsx";
 import { PLACE_WORD, type PlaceKind } from "./placeForm.ts";
 import PlaceSheet from "./PlaceSheet.tsx";
+import RestoreBackupSheet from "./RestoreBackupSheet.tsx";
 
 // 版面照 docs/prototype/p0.html 的 renderSettings()。
-// 還沒做的：資料（P2-13）。還沒做的功能不顯示（P1-19 確認）。
 
 type Place = Location | Category;
 
@@ -230,6 +232,8 @@ function SettingsSkeleton() {
 type OpenSheet =
   | { type: "lead" }
   | { type: "place"; kind: PlaceKind; target: Place | null }
+  | { type: "export" }
+  | { type: "restore" }
   | null;
 
 function SettingsPage() {
@@ -237,7 +241,9 @@ function SettingsPage() {
   const locations = useLocations();
   const categories = useCategories();
   const items = useItems();
-  const queries = [settings, locations, categories, items];
+  // 匯出面板顯示更換紀錄與照片的數量（P2-13）
+  const logs = useLogs();
+  const queries = [settings, locations, categories, items, logs];
   const [sheet, setSheet] = useState<OpenSheet>(null);
 
   const failed = queries.find((query) => query.error !== null);
@@ -264,7 +270,8 @@ function SettingsPage() {
             settings.data &&
             locations.data &&
             categories.data &&
-            items.data
+            items.data &&
+            logs.data
           ) ? (
           <SettingsSkeleton />
         ) : (
@@ -311,6 +318,43 @@ function SettingsPage() {
                 setSheet({ type: "place", kind: "category", target: place })
               }
             />
+
+            {/* 資料（P2-13），照原型的「資料」段 */}
+            <SectionDivider title="資料" />
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setSheet({ type: "export" })}
+                className="rounded-xl border border-line bg-surface py-3 text-[14px]"
+              >
+                匯出備份
+              </button>
+              <button
+                type="button"
+                onClick={() => setSheet({ type: "restore" })}
+                className="rounded-xl border border-line bg-surface py-3 text-[14px]"
+              >
+                還原
+              </button>
+            </div>
+
+            {sheet?.type === "export" && (
+              <ExportBackupSheet
+                data={{
+                  items: items.data,
+                  logs: logs.data,
+                  locations: locations.data,
+                  categories: categories.data,
+                }}
+                onClose={() => setSheet(null)}
+              />
+            )}
+            {sheet?.type === "restore" && (
+              <RestoreBackupSheet
+                currentItemCount={items.data.length}
+                onClose={() => setSheet(null)}
+              />
+            )}
 
             {sheet?.type === "lead" && (
               <DefaultLeadSheet

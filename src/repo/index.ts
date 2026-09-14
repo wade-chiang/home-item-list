@@ -348,7 +348,7 @@ export async function createLogClearingPause(
 
 /**
  * 把「建立更換紀錄」加進 batch；這次有買新的就先建立採購紀錄，更換紀錄指向它（P2-6、P2-7）。
- * 採購紀錄的 id 由前端先產生：batch 內拿不到前一個請求建立的 id（CLAUDE.md「PocketBase 有三個預設值要改」）。
+ * 採購紀錄的 id 由前端先產生：batch 內拿不到前一個請求建立的 id（CLAUDE.md「PocketBase 有幾個預設值要改」）。
  * 回傳更換紀錄在 batch 結果裡的位置
  */
 function addLogCreation(
@@ -648,5 +648,124 @@ export async function restoreLog(
     batch.collection("purchases").create(toPurchaseRecord(purchase));
   }
   batch.collection("logs").create({ ...toLogRecord(log), photos: [...photos] });
+  await batch.send();
+}
+
+/** 全部資料：匯出備份與還原用（P2-13）。不含手機本機的偏好（外觀、物品 icon 顯示） */
+export type AllData = {
+  settings: Settings;
+  locations: Location[];
+  categories: Category[];
+  items: Item[];
+  logs: Log[];
+  purchases: Purchase[];
+};
+
+export async function loadAllData(): Promise<AllData> {
+  const [settings, locations, categories, items, logs, purchases] =
+    await Promise.all([
+      getSettings(),
+      listLocations(),
+      listCategories(),
+      listItems(),
+      listLogs(),
+      listPurchases(),
+    ]);
+  return { settings, locations, categories, items, logs, purchases };
+}
+
+/** 還原需要的 batch 請求數超過上限（migration 1789276263 的 1000）時丟出，資料不會有任何變動 */
+export class BackupTooLargeError extends Error {
+  readonly requestCount: number;
+
+  constructor(requestCount: number) {
+    super(
+      `資料量太大，一次還原需要 ${requestCount} 個請求，超過上限 ${BATCH_MAX_REQUESTS}，沒有還原`,
+    );
+    this.name = "BackupTooLargeError";
+    this.requestCount = requestCount;
+  }
+}
+
+/** batch 一次最多的請求數，要跟 migration 1789276263 的設定一致 */
+const BATCH_MAX_REQUESTS = 1000;
+
+/**
+ * 用備份取代全部資料（P2-13）。清空與寫回放在同一個 batch，是單一交易：任一步失敗，資料完全不變（P2-13 確認）。
+ *
+ * - 順序：刪物品（更換紀錄連帶刪除）→ 刪採購、位置、類別 → 建位置、類別、採購 → 建物品（帶照片）→ 建更換紀錄（帶照片）→ 設定
+ * - 照片檔名會變成新的，內容相同
+ * - 更換紀錄的建立時間（autodate）無法寫入，會變成還原當下；照原本的建立順序由舊到新送出，同一天多筆的先後不保證（同 restoreItemWithLogs）
+ * - 交易逾時由 migration 1789450000 調成 30 秒
+ */
+export async function replaceAllData(
+  data: AllData,
+  photos: {
+    items: ReadonlyMap<ItemId, readonly Blob[]>;
+    logs: ReadonlyMap<LogId, readonly Blob[]>;
+  },
+): Promise<void> {
+  const current = await loadAllData();
+  const requestCount =
+    current.items.length +
+    current.purchases.length +
+    current.locations.length +
+    current.categories.length +
+    data.locations.length +
+    data.categories.length +
+    data.purchases.length +
+    data.items.length +
+    data.logs.length +
+    1;
+  if (requestCount > BATCH_MAX_REQUESTS) {
+    throw new BackupTooLargeError(requestCount);
+  }
+
+  const settingsRow = await pb
+    .collection("settings")
+    .getFirstListItem(pb.filter("key = {:key}", { key: "defaultLeadDays" }));
+
+  const batch = pb.createBatch();
+  for (const item of current.items) {
+    batch.collection("items").delete(item.id);
+  }
+  for (const purchase of current.purchases) {
+    batch.collection("purchases").delete(purchase.id);
+  }
+  for (const location of current.locations) {
+    batch.collection("locations").delete(location.id);
+  }
+  for (const category of current.categories) {
+    batch.collection("categories").delete(category.id);
+  }
+
+  for (const { id, name, icon, sortOrder } of data.locations) {
+    batch.collection("locations").create({ id, name, icon, sortOrder });
+  }
+  for (const { id, name, icon, sortOrder } of data.categories) {
+    batch.collection("categories").create({ id, name, icon, sortOrder });
+  }
+  for (const purchase of data.purchases) {
+    batch.collection("purchases").create(toPurchaseRecord(purchase));
+  }
+  for (const item of data.items) {
+    batch.collection("items").create({
+      ...toItemRecord(item),
+      photos: [...(photos.items.get(item.id) ?? [])],
+    });
+  }
+  const oldestFirst = data.logs.toSorted((a, b) =>
+    a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0,
+  );
+  for (const log of oldestFirst) {
+    batch.collection("logs").create({
+      ...toLogRecord(log),
+      photos: [...(photos.logs.get(log.id) ?? [])],
+    });
+  }
+  batch
+    .collection("settings")
+    .update(settingsRow.id, { value: String(data.settings.defaultLeadDays) });
+
   await batch.send();
 }

@@ -5,5 +5,5 @@ import PocketBase from "pocketbase";
 export const pb = new PocketBase("/");
 
 // SDK 預設會取消「同一個方法＋路徑」還在等回應的請求。
-// listLogs 與 listLogsByItem 打同一個路徑，同時發出會互相取消，所以關掉（CLAUDE.md「PocketBase 有三個預設值要改」）。
+// listLogs 與 listLogsByItem 打同一個路徑，同時發出會互相取消，所以關掉（CLAUDE.md「PocketBase 有幾個預設值要改」）。
 pb.autoCancellation(false);
