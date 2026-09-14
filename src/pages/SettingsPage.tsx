@@ -12,7 +12,9 @@ import LoadErrorState from "../components/LoadErrorState.tsx";
 import PageHeader from "../components/PageHeader.tsx";
 import SectionDivider from "../components/SectionDivider.tsx";
 import {
+  readItemIconsPreference,
   readThemePreference,
+  saveItemIconsPreference,
   saveThemePreference,
   type ThemePreference,
 } from "../preferences.ts";
@@ -29,7 +31,7 @@ import { PLACE_WORD, type PlaceKind } from "./placeForm.ts";
 import PlaceSheet from "./PlaceSheet.tsx";
 
 // 版面照 docs/prototype/p0.html 的 renderSettings()。
-// 還沒做的：物品 icon 顯示開關（P2-12）；資料（P2-13）。還沒做的功能不顯示（P1-19 確認）。
+// 還沒做的：資料（P2-13）。還沒做的功能不顯示（P1-19 確認）。
 
 type Place = Location | Category;
 
@@ -90,6 +92,42 @@ function countItems(kind: PlaceKind, place: Place, items: readonly Item[]) {
       ? item.locationId === place.id
       : item.categoryId === place.id,
   ).length;
+}
+
+/**
+ * 「物品 icon」開關（P2-12），照原型的 switchRow()。存在這支手機上（PRODUCT.md §4.6）。
+ * 原型的說明寫「在首頁列表」，但實際上首頁與物品頁的列表都受影響，文字照實際行為改（P2-12 確認）
+ */
+function ItemIconsSwitch() {
+  const [show, setShow] = useState(readItemIconsPreference);
+
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={show}
+      onClick={() => {
+        setShow(!show);
+        saveItemIconsPreference(!show);
+      }}
+      className="flex w-full items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-3 text-left"
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block text-[14.5px]">物品 icon</span>
+        <span className="block text-[12px] text-ink-3">
+          在首頁與物品頁的列表顯示 icon
+        </span>
+      </span>
+      <span
+        className={`relative h-6 w-10 shrink-0 rounded-full ${show ? "bg-accent" : "bg-line"}`}
+      >
+        {/* 原型的 shadow 在 Tailwind v4 是 shadow-sm */}
+        <span
+          className={`absolute top-0.5 h-5 w-5 rounded-full bg-surface shadow-sm transition-all ${show ? "left-[18px]" : "left-0.5"}`}
+        />
+      </span>
+    </button>
+  );
 }
 
 function PlaceSection({
@@ -216,6 +254,9 @@ function SettingsPage() {
         {/* 外觀存在手機上，不用等資料，也不受讀取失敗影響 */}
         <SectionDivider title="外觀" />
         <ThemeSegment />
+        <div className="mt-2">
+          <ItemIconsSwitch />
+        </div>
 
         {failed?.error ? (
           <LoadErrorState error={failed.error} onRetry={retry} />

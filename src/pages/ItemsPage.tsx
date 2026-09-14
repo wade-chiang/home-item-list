@@ -1,4 +1,5 @@
 import { ChevronRight } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router";
 import EmptyItemsState from "../components/EmptyItemsState.tsx";
 import Icon from "../components/Icon.tsx";
@@ -6,6 +7,7 @@ import LoadErrorState from "../components/LoadErrorState.tsx";
 import PageHeader from "../components/PageHeader.tsx";
 import { DAYS_TEXT_COLOR, STRIPE_COLOR } from "../components/statusStyles.ts";
 import type { NavState } from "../navigation.ts";
+import { readItemIconsPreference } from "../preferences.ts";
 import { brandModelLine, isFilled, shortDaysText } from "../shared/display.ts";
 import type { ItemEntry } from "./itemEntries.ts";
 import { buildItemsData, type ItemsGroup } from "./itemsData.ts";
@@ -16,7 +18,16 @@ import { useItemEntriesData } from "./useItemEntriesData.ts";
 
 const FROM_ITEMS: NavState = { from: "items" };
 
-function ItemRow({ entry, isFirst }: { entry: ItemEntry; isFirst: boolean }) {
+function ItemRow({
+  entry,
+  isFirst,
+  showIcon,
+}: {
+  entry: ItemEntry;
+  isFirst: boolean;
+  /** 設定頁的「物品 icon」開關（P2-12）：位置名稱前的小 icon，照原型 */
+  showIcon: boolean;
+}) {
   const { item, location, latestLog, daysLeft, status } = entry;
 
   return (
@@ -31,9 +42,11 @@ function ItemRow({ entry, isFirst }: { entry: ItemEntry; isFirst: boolean }) {
       />
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5 text-[15px] font-medium">
-          <span className="text-ink-3">
-            <Icon name={location.icon} size={15} />
-          </span>
+          {showIcon && (
+            <span className="text-ink-3">
+              <Icon name={location.icon} size={15} />
+            </span>
+          )}
           <span className="whitespace-nowrap">{location.name}</span>
           {isFilled(item.label) && (
             <span className="truncate font-normal text-ink-3">
@@ -58,7 +71,13 @@ function ItemRow({ entry, isFirst }: { entry: ItemEntry; isFirst: boolean }) {
   );
 }
 
-function GroupSection({ group }: { group: ItemsGroup }) {
+function GroupSection({
+  group,
+  showIcons,
+}: {
+  group: ItemsGroup;
+  showIcons: boolean;
+}) {
   return (
     <section>
       <div className="mb-2 mt-6 flex items-center gap-2.5">
@@ -75,7 +94,12 @@ function GroupSection({ group }: { group: ItemsGroup }) {
       </div>
       <div className="overflow-hidden rounded-2xl bg-surface shadow-card">
         {group.items.map((entry, index) => (
-          <ItemRow key={entry.item.id} entry={entry} isFirst={index === 0} />
+          <ItemRow
+            key={entry.item.id}
+            entry={entry}
+            isFirst={index === 0}
+            showIcon={showIcons}
+          />
         ))}
       </div>
     </section>
@@ -95,6 +119,8 @@ function ItemsSkeleton() {
 
 function ItemsPage() {
   const { data, error, retry } = useItemEntriesData(buildItemsData);
+  // 物品 icon 顯示偏好（P2-12），打開物品頁時讀一次
+  const [showIcons] = useState(readItemIconsPreference);
 
   return (
     <>
@@ -115,7 +141,11 @@ function ItemsPage() {
               <span className="text-[12px] text-ink-3">依類別分組</span>
             </div>
             {data.groups.map((group) => (
-              <GroupSection key={group.category.id} group={group} />
+              <GroupSection
+                key={group.category.id}
+                group={group}
+                showIcons={showIcons}
+              />
             ))}
           </>
         )}

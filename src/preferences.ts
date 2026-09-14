@@ -45,3 +45,35 @@ export function applyThemePreference(preference: ThemePreference): void {
     root.setAttribute("data-theme", preference);
   }
 }
+
+/** localStorage 的 key。只有畫面載入後才讀，不需要在 index.html 提前套用 */
+export const ITEM_ICONS_STORAGE_KEY = "home-item-list.itemIcons";
+
+/** 列表是否顯示物品的 icon（P2-12，PRODUCT.md §4.6）。預設開啟；只有存的是 "off" 才關閉 */
+export function parseItemIconsPreference(value: string | null): boolean {
+  return value !== "off";
+}
+
+export function readItemIconsPreference(): boolean {
+  try {
+    return parseItemIconsPreference(
+      localStorage.getItem(ITEM_ICONS_STORAGE_KEY),
+    );
+  } catch {
+    // 見 readThemePreference
+    return true;
+  }
+}
+
+/** 存不進去時不丟錯：這次照樣切換，只是下次開啟不會記得 */
+export function saveItemIconsPreference(show: boolean): void {
+  try {
+    if (show) {
+      localStorage.removeItem(ITEM_ICONS_STORAGE_KEY);
+    } else {
+      localStorage.setItem(ITEM_ICONS_STORAGE_KEY, "off");
+    }
+  } catch {
+    // 見 readThemePreference
+  }
+}

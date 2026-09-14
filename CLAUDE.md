@@ -92,7 +92,7 @@ src/
     types.ts         領域型別（手寫維護，見「型別要自己顧」）
   pages/
   components/
-  preferences.ts     這支手機自己的偏好（外觀），存在 localStorage，不是資料庫的資料，所以不在 repo/
+  preferences.ts     這支手機自己的偏好（外觀、物品 icon 顯示），存在 localStorage，不是資料庫的資料，所以不在 repo/
   photoFile.ts       上傳前把照片縮小並轉成 JPEG（瀏覽器 canvas，不是資料存取，所以不在 repo/）
 pb_migrations/       PocketBase collection 定義（**進 git**）
 pb_public/           前端 build 產物（不進 git）

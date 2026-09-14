@@ -7,6 +7,7 @@ import LoadErrorState from "../components/LoadErrorState.tsx";
 import PageHeader from "../components/PageHeader.tsx";
 import { DAYS_TEXT_COLOR, STRIPE_COLOR } from "../components/statusStyles.ts";
 import type { NavState } from "../navigation.ts";
+import { readItemIconsPreference } from "../preferences.ts";
 import { brandModelLine, daysText, isFilled } from "../shared/display.ts";
 import DoneSheet from "./DoneSheet.tsx";
 import {
@@ -75,10 +76,13 @@ function StatTiles({
 function ItemRow({
   entry,
   isFirst,
+  showIcon,
   onDone,
 }: {
   entry: ItemEntry;
   isFirst: boolean;
+  /** 設定頁的「物品 icon」開關（P2-12） */
+  showIcon: boolean;
   onDone: (entry: ItemEntry) => void;
 }) {
   const { item, category, latestLog, daysLeft, status } = entry;
@@ -92,9 +96,11 @@ function ItemRow({
         className="w-[3px] self-stretch rounded-full"
         style={{ background: STRIPE_COLOR[status] }}
       />
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-line-2 text-ink-2">
-        <Icon name={category.icon} size={19} />
-      </span>
+      {showIcon && (
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-line-2 text-ink-2">
+          <Icon name={category.icon} size={19} />
+        </span>
+      )}
       <Link
         to={`/items/${item.id}`}
         state={FROM_HOME}
@@ -129,9 +135,11 @@ function ItemRow({
 
 function GroupSection({
   group,
+  showIcons,
   onDone,
 }: {
   group: HomeGroup;
+  showIcons: boolean;
   onDone: (entry: ItemEntry) => void;
 }) {
   return (
@@ -159,6 +167,7 @@ function GroupSection({
             key={entry.item.id}
             entry={entry}
             isFirst={index === 0}
+            showIcon={showIcons}
             onDone={onDone}
           />
         ))}
@@ -219,6 +228,8 @@ function HomePage() {
   // 篩選只存在這個畫面的 state：離開首頁（換分頁、進詳情頁）時畫面卸載就清除，
   // 不存 localStorage、不放網址（CLAUDE.md「首頁篩選不要記住」）
   const [filter, setFilter] = useState<HomeFilter | null>(null);
+  // 物品 icon 顯示偏好存在這支手機上（P2-12）。首頁跟設定頁不會同時出現，打開首頁時讀一次即可
+  const [showIcons] = useState(readItemIconsPreference);
   const {
     data: home,
     error,
@@ -253,6 +264,7 @@ function HomePage() {
               <GroupSection
                 key={group.location.id}
                 group={group}
+                showIcons={showIcons}
                 onDone={setDoneEntry}
               />
             ))}
