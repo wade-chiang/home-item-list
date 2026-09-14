@@ -71,6 +71,7 @@
 | 測試 | Vitest |
 | 程式碼風格 | oxlint + Prettier。oxlint 開 type-aware（需 `oxlint-tsgolint`） |
 | 資料驗證 | zod。進出 `src/repo/` 的資料都要通過驗證（見紀律 3） |
+| 拖曳排序 | `@dnd-kit/react`（0.x，版本範圍 `^0.5.0`，不主動升級）。拖曳程式集中在 `src/pages/LocationReorderList.tsx` |
 | 後端 | **PocketBase（暫定，見決策紀錄）**，內嵌 SQLite |
 | 部署 | Docker Compose，單一 container，PocketBase 版本 pin 死（見紀律 3）。前端 build 產物放進 `pb_public/`，由 PocketBase 一併 serve |
 | 未來 app | Capacitor（Android/iOS），資料換成裝置上的 SQLite（`@capacitor-community/sqlite`），提醒換成本地通知 |
@@ -324,6 +325,7 @@ docker compose start
 | **字型檔放進 repo，不從 CDN 載入** | 紀律 2 要求前端能離線開啟，Google Fonts CDN 在 Capacitor 離線時載不到。DM Mono 只放 latin 子集的 400、500 兩個 woff2（原型只用到這兩個字重，中文由系統字型接手），授權 OFL 1.1，授權檔放在字型旁邊 |
 | **Vitest** | 與前端同一套工具鏈，`src/shared/due.ts` 的測試不需要額外配置 |
 | **oxlint，不用 ESLint** | TypeScript 用 7.0，而 typescript-eslint 8.70 只支援 `typescript <6.1.0`（7.0 沒有程式化 API）；要用 ESLint 得另裝 `@typescript/typescript6` 別名，編輯器與 build 會用不同 TS 版本。oxlint 的 type-aware 反而要求 TS 7.0+。代價是 type-aware 仍是 beta。2026-09-11 查證 |
+| **拖曳排序用 `@dnd-kit/react`，不用舊版 `@dnd-kit/core`** | 舊版 2024-12 後沒有新版；新版宣告支援 React 19 且持續開發，代價是 0.x 可能有破壞性改版，所以拖曳程式集中在一個檔案，換套件時只改那裡。不另裝 `@dnd-kit/helpers`，排序搬移自己寫（`moveItem`）。2026-09-15 查證 |
 | **「今天」依裝置時區，不寫死 `Asia/Taipei`** | 之後想讓其他國家的使用者使用。日期本身存成不帶時區的 `YYYY-MM-DD`，只有「今天是幾號」需要時區，交給裝置決定就不必做時區設定。代價是出國時「今天」會變成當地日期 |
 
 ### PocketBase 是暫定的：退場條件與成本
