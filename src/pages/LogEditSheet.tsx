@@ -10,12 +10,20 @@ import {
   LABEL_CLASS,
 } from "../components/formStyles.ts";
 import { useToast } from "../components/toastContext.ts";
-import { invalidateItemData, useDeleteLog, useUpdateLog } from "../queries.ts";
-import { downloadPhotos, restoreLog, updateLog } from "../repo/index.ts";
+import {
+  invalidateItemData,
+  useDeleteLog,
+  useSaveLogWithPurchase,
+} from "../queries.ts";
+import {
+  downloadPhotos,
+  restoreLog,
+  revertLogWithPurchase,
+} from "../repo/index.ts";
 import { getToday } from "../shared/date.ts";
 import { displayName } from "../shared/display.ts";
 import { latestLog } from "../shared/due.ts";
-import type { Log } from "../shared/types.ts";
+import type { Log, Purchase } from "../shared/types.ts";
 import type { ItemEntry } from "./itemEntries.ts";
 import {
   buildLogSubmission,
@@ -26,9 +34,15 @@ import {
   type LogFormState,
 } from "./logForm.ts";
 import PhotoField from "./PhotoField.tsx";
+import PurchaseFields from "./PurchaseFields.tsx";
+import {
+  buildPurchase,
+  type PurchaseFormErrors,
+  type PurchaseFormState,
+  purchaseFormFrom,
+} from "./purchaseForm.ts";
 
 // 編輯更換紀錄的面板，版面照 docs/prototype/p0.html 的 openLogEdit()（PRODUCT.md §5.4）。
-// 這一步不做：這次有買新的與價格（P2-8）。
 // 耗材照片立刻上傳與刪除，不等按儲存（見 PhotoField）。
 // 刪除不跳確認：照原型，結果寫在提示條上並可復原。
 
@@ -38,10 +52,12 @@ type Props = {
   logs: readonly Log[];
   /** 要編輯的那一筆 */
   log: Log;
+  /** 這筆指向的採購紀錄：編輯價格（P2-8）；刪除時一起刪，復原時一起還原（P2-6 確認） */
+  purchase: Purchase | null;
   onClose: () => void;
 };
 
-function LogEditSheet({ entry, logs, log, onClose }: Props) {
+function LogEditSheet({ entry, logs, log, purchase, onClose }: Props) {
   const { item, location, category } = entry;
   const today = getToday();
   const name = displayName(location.name, category.name, item.label);
@@ -52,7 +68,11 @@ function LogEditSheet({ entry, logs, log, onClose }: Props) {
     initialLogForm(log, today),
   );
   const [errors, setErrors] = useState<LogFormErrors>({});
-  const update = useUpdateLog();
+  const update = useSaveLogWithPurchase();
+  const [purchaseForm, setPurchaseForm] = useState<PurchaseFormState>(() =>
+    purchaseFormFrom(purchase),
+  );
+  const [purchaseErrors, setPurchaseErrors] = useState<PurchaseFormErrors>({});
   const remove = useDeleteLog();
   const queryClient = useQueryClient();
   const showToast = useToast();
@@ -78,29 +98,34 @@ function LogEditSheet({ entry, logs, log, onClose }: Props) {
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const result = buildLogSubmission(form, log, today);
-    if (!result.ok) {
-      setErrors(result.errors);
+    const purchaseResult = buildPurchase(purchaseForm);
+    setErrors(result.ok ? {} : result.errors);
+    setPurchaseErrors(purchaseResult.ok ? {} : purchaseResult.errors);
+    if (!result.ok || !purchaseResult.ok) {
       return;
     }
-    setErrors({});
     const after = logs.map((other) =>
       other.id === log.id ? result.log : other,
     );
     const outcome = describeOutcome(logs, after, log.id);
-    update.mutate(result.log, {
-      onSuccess: () => {
-        showToast({
-          message: outcome === null ? "已儲存更換紀錄" : `已儲存 · ${outcome}`,
-          // 復原＝把這筆改回開啟面板時的值。面板已經關閉，所以直接呼叫 repo 並自己讓資料重抓
-          onUndo: () => {
-            void updateLog(log)
-              .then(() => invalidateItemData(queryClient))
-              .catch(undoFailed);
-          },
-        });
-        onClose();
+    update.mutate(
+      { log: result.log, before: purchase, after: purchaseResult.purchase },
+      {
+        onSuccess: (saved) => {
+          showToast({
+            message:
+              outcome === null ? "已儲存更換紀錄" : `已儲存 · ${outcome}`,
+            // 復原＝把這筆與它的採購紀錄改回開啟面板時的樣子。面板已經關閉，所以直接呼叫 repo 並自己讓資料重抓
+            onUndo: () => {
+              void revertLogWithPurchase(log, purchase, saved)
+                .then(() => invalidateItemData(queryClient))
+                .catch(undoFailed);
+            },
+          });
+          onClose();
+        },
       },
-    });
+    );
   };
 
   const onDelete = async () => {
@@ -122,12 +147,19 @@ function LogEditSheet({ entry, logs, log, onClose }: Props) {
       setBackingUp(false);
     }
     remove.mutate(log, {
-      onSuccess: () => {
+      onSuccess: (deletedPurchaseIds) => {
         showToast({
           message: outcome === null ? "已刪除更換紀錄" : `已刪除 · ${outcome}`,
           // 復原＝用原本的 id 把這筆建立回去
           onUndo: () => {
-            void restoreLog(log, photos)
+            void restoreLog(
+              log,
+              photos,
+              // 只還原實際刪掉的採購紀錄；還被別的更換紀錄指向的沒刪，重建會撞到同一個 id
+              purchase !== null && deletedPurchaseIds.includes(purchase.id)
+                ? purchase
+                : null,
+            )
               .then(() => invalidateItemData(queryClient))
               .catch(undoFailed);
           },
@@ -271,6 +303,13 @@ function LogEditSheet({ entry, logs, log, onClose }: Props) {
             className={`${INPUT_CLASS} leading-relaxed`}
           />
         </div>
+
+        {/* 價格（P2-8）：取消勾選時，沒有別的更換紀錄指向的採購紀錄會刪掉，可以復原 */}
+        <PurchaseFields
+          form={purchaseForm}
+          errors={purchaseErrors}
+          onChange={setPurchaseForm}
+        />
 
         {errors.cycle !== undefined && (
           <p className="mt-3 text-[13px] text-overdue">{errors.cycle}</p>

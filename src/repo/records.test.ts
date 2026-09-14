@@ -14,6 +14,8 @@ import {
   toLocation,
   toLog,
   toLogRecord,
+  toPurchase,
+  toPurchaseRecord,
   toSettings,
 } from "./records.ts";
 
@@ -152,6 +154,44 @@ describe("toLog", () => {
     expect(() => toLog({ ...logResponse, cycleDays: 0 })).toThrow(
       RepoDataError,
     );
+  });
+});
+
+describe("toPurchase", () => {
+  const purchaseResponse = {
+    collectionId: "pbc_1",
+    collectionName: "purchases",
+    created: "2026-09-14 04:00:00.000Z",
+    householdId: "",
+    id: "p00000000000001",
+    note: "",
+    quantity: 1,
+    unit: "",
+    unitPrice: 0,
+    updated: "2026-09-14 04:00:00.000Z",
+  };
+
+  it("單價 0 是贈品，照樣是合法值；空的單位與備註轉成 null", () => {
+    expect(toPurchase(purchaseResponse)).toEqual({
+      id: "p00000000000001",
+      unitPrice: 0,
+      quantity: 1,
+      unit: null,
+      note: null,
+    });
+  });
+
+  it("數量是 0（PocketBase 的零值）時丟出錯誤", () => {
+    expect(() => toPurchase({ ...purchaseResponse, quantity: 0 })).toThrow(
+      RepoDataError,
+    );
+  });
+
+  it("寫出時 null 轉回空字串，再讀回內容不變", () => {
+    const purchase = toPurchase({ ...purchaseResponse, unit: "捲" });
+    const record = toPurchaseRecord(purchase);
+    expect(record.note).toBe("");
+    expect(toPurchase({ ...record })).toEqual(purchase);
   });
 });
 

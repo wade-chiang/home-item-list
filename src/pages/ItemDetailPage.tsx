@@ -11,10 +11,19 @@ import {
   STATUS_LABEL,
 } from "../components/statusStyles.ts";
 import { useToast } from "../components/toastContext.ts";
-import { invalidateItemData, useUpdateItemPause } from "../queries.ts";
+import {
+  invalidateItemData,
+  usePurchases,
+  useUpdateItemPause,
+} from "../queries.ts";
 import { updateItemPause } from "../repo/index.ts";
-import { brandModelText, displayName, isFilled } from "../shared/display.ts";
-import type { Log } from "../shared/types.ts";
+import {
+  brandModelText,
+  displayName,
+  isFilled,
+  purchaseText,
+} from "../shared/display.ts";
+import type { Log, Purchase } from "../shared/types.ts";
 import DeleteItemSheet from "./DeleteItemSheet.tsx";
 import DoneSheet from "./DoneSheet.tsx";
 import { buildItemDetailData, type HistoryRow } from "./itemDetailData.ts";
@@ -25,7 +34,7 @@ import PhotoField from "./PhotoField.tsx";
 import { useItemEntriesData } from "./useItemEntriesData.ts";
 
 // 版面照 docs/prototype/p0.html 的 renderDetail()。
-// 這一步不做（P1-13 確認）：實際間隔回饋與型號／週期變更標示（P2-9）、價格（P2-8）。
+// 這一步不做（P1-13 確認）：實際間隔回饋與型號／週期變更標示（P2-9）。
 // 還不能用的操作照原型顯示但停用，各 task 做到時再接上。
 
 function SummaryCard({ entry }: { entry: ItemEntry }) {
@@ -156,9 +165,12 @@ function ItemPhotosCard({ item }: { item: ItemEntry["item"] }) {
 
 function HistoryItem({
   row,
+  purchase,
   onEdit,
 }: {
   row: HistoryRow;
+  /** 這筆指向的採購紀錄；這次沒買新的時是 null */
+  purchase: Purchase | null;
   onEdit: (log: Log) => void;
 }) {
   const { log, gapDays, isOldest } = row;
@@ -200,12 +212,20 @@ function HistoryItem({
               {log.note}
             </p>
           )}
-          {(log.photos.length > 0 || log.replacedOn === null) && (
+          {(log.photos.length > 0 ||
+            purchase !== null ||
+            log.replacedOn === null) && (
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-ink-3">
               {log.photos.length > 0 && (
                 <span className="inline-flex items-center gap-1 whitespace-nowrap">
                   <Camera size={13} strokeWidth={1.75} aria-hidden />
                   耗材照片 {log.photos.length} 張
+                </span>
+              )}
+              {/* 價格（PRODUCT.md §4.3），順序照原型：照片張數、價格、預計到期 */}
+              {purchase !== null && (
+                <span className="whitespace-nowrap font-mono">
+                  {purchaseText(purchase)}
                 </span>
               )}
               {log.replacedOn === null && (
@@ -226,9 +246,11 @@ function HistoryItem({
 
 function HistoryCard({
   history,
+  purchaseOf,
   onEdit,
 }: {
   history: HistoryRow[];
+  purchaseOf: (log: Log) => Purchase | null;
   onEdit: (log: Log) => void;
 }) {
   return (
@@ -239,7 +261,12 @@ function HistoryCard({
       </p>
       <ol className="mt-1">
         {history.map((row) => (
-          <HistoryItem key={row.log.id} row={row} onEdit={onEdit} />
+          <HistoryItem
+            key={row.log.id}
+            row={row}
+            purchase={purchaseOf(row.log)}
+            onEdit={onEdit}
+          />
         ))}
       </ol>
     </div>
@@ -322,9 +349,23 @@ function DetailSkeleton() {
 
 function ItemDetailPage() {
   const { itemId = "" } = useParams();
-  const { data, error, retry } = useItemEntriesData((input) =>
+  const detail = useItemEntriesData((input) =>
     buildItemDetailData(input, itemId),
   );
+  // 採購紀錄另外抓（P2-6）：只有詳情頁用得到，不放進首頁與物品頁共用的資料。
+  // 要等它到齊才顯示：刪除物品或更換紀錄時要帶著採購紀錄，復原才能還原
+  const purchases = usePurchases();
+  const data = purchases.data === undefined ? null : detail.data;
+  const error = detail.error ?? purchases.error;
+  const retry = () => {
+    detail.retry();
+    void purchases.refetch();
+  };
+  const purchaseById = new Map(
+    (purchases.data ?? []).map((purchase) => [purchase.id, purchase]),
+  );
+  const purchaseOf = (log: Log) =>
+    log.purchaseId === null ? null : (purchaseById.get(log.purchaseId) ?? null);
   // 換好了面板是否開著。確認後留在詳情頁，更換歷史會直接多出一筆（P1-15 確認）
   const [doneOpen, setDoneOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -367,6 +408,7 @@ function ItemDetailPage() {
             <ItemPhotosCard item={data.entry.item} />
             <HistoryCard
               history={data.history}
+              purchaseOf={purchaseOf}
               onEdit={(log) => setEditingLogId(log.id)}
             />
             <ItemActions
@@ -435,6 +477,7 @@ function ItemDetailPage() {
                     entry={data.entry}
                     logs={data.history.map((row) => row.log)}
                     log={editingLog}
+                    purchase={purchaseOf(editingLog)}
                     onClose={() => setEditingLogId(null)}
                   />
                 )
@@ -444,6 +487,10 @@ function ItemDetailPage() {
               <DeleteItemSheet
                 entry={data.entry}
                 logs={data.history.map((row) => row.log)}
+                purchases={data.history.flatMap((row) => {
+                  const purchase = purchaseOf(row.log);
+                  return purchase === null ? [] : [purchase];
+                })}
                 onClose={() => setDeleteOpen(false)}
               />
             )}

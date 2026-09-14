@@ -9,6 +9,7 @@ import type {
   LocationId,
   Log,
   LogId,
+  Purchase,
   PurchaseId,
   Settings,
 } from "../shared/types.ts";
@@ -177,6 +178,26 @@ export function toLog(raw: unknown): Log {
   );
 }
 
+const purchaseRecord = z.object({
+  id: recordId,
+  // 0 表示贈品；必須有值由這裡把關（CLAUDE.md「型別要自己顧」：number 欄位的零值有意義時不設 required）
+  unitPrice: z.number().int().min(0),
+  quantity: z.number().int().min(1),
+  unit: optionalText,
+  note: optionalText,
+});
+
+export function toPurchase(raw: unknown): Purchase {
+  const r = parse("purchases", purchaseRecord, raw);
+  return {
+    id: r.id as PurchaseId,
+    unitPrice: r.unitPrice,
+    quantity: r.quantity,
+    unit: r.unit,
+    note: r.note,
+  };
+}
+
 const settingRow = z.object({ key: z.string(), value: z.string() });
 
 /** settings 在 PocketBase 是 key-value 列，組成領域型別的 Settings 物件 */
@@ -211,6 +232,17 @@ export type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
 /** PocketBase 存不了 null，寫出時轉回空字串 */
 function orEmpty(value: string | null): string {
   return value ?? "";
+}
+
+/** 採購紀錄不存名稱、類別與日期，由指向它的更換紀錄推導（PRODUCT.md §2）；householdId 同樣不寫入 */
+export function toPurchaseRecord(purchase: Purchase) {
+  return {
+    id: purchase.id,
+    unitPrice: purchase.unitPrice,
+    quantity: purchase.quantity,
+    unit: orEmpty(purchase.unit),
+    note: orEmpty(purchase.note),
+  };
 }
 
 // householdId 是保留欄位（CLAUDE.md「明確不做」多人共用），不寫入，PocketBase 存成空字串。

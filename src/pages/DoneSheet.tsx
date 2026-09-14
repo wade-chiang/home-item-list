@@ -31,9 +31,16 @@ import {
 } from "./doneForm.ts";
 import type { ItemEntry } from "./itemEntries.ts";
 import PackagePhotoButton from "./PackagePhotoButton.tsx";
+import PurchaseFields from "./PurchaseFields.tsx";
+import {
+  buildPurchase,
+  initialPurchaseForm,
+  type PurchaseFormErrors,
+  type PurchaseFormState,
+} from "./purchaseForm.ts";
 
 // 換好了確認面板，首頁與物品詳情頁共用。版面照 docs/prototype/p0.html 的 openDone()。
-// 這一步不做：這次有買新的（P2-7）。
+// 「這次有買新的」勾了才建立採購紀錄，跟更換紀錄放在同一個 batch（P2-7）。
 // 「加耗材包裝照片」選好的照片暫存在面板，按確認時跟更換紀錄一起上傳（P2-3 確認）。
 // 暫停中的物品按換好了會同時取消暫停（PRODUCT.md §5.1，P2-1）。
 
@@ -63,6 +70,9 @@ function DoneSheet({ entry, onClose }: Props) {
   const pauseClearingCreate = useCreateLogClearingPause();
   const createLog = clearsPause ? pauseClearingCreate : plainCreate;
   const [packagePhoto, setPackagePhoto] = useState<File | null>(null);
+  const [purchaseForm, setPurchaseForm] =
+    useState<PurchaseFormState>(initialPurchaseForm);
+  const [purchaseErrors, setPurchaseErrors] = useState<PurchaseFormErrors>({});
   const queryClient = useQueryClient();
   const showToast = useToast();
   const id = useId();
@@ -85,16 +95,18 @@ function DoneSheet({ entry, onClose }: Props) {
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const result = buildDoneSubmission(form, today);
-    if (!result.ok) {
-      setErrors(result.errors);
+    const purchaseResult = buildPurchase(purchaseForm);
+    setErrors(result.ok ? {} : result.errors);
+    setPurchaseErrors(purchaseResult.ok ? {} : purchaseResult.errors);
+    if (!result.ok || !purchaseResult.ok) {
       return;
     }
-    setErrors({});
     createLog.mutate(
       {
         itemId: item.id,
         log: result.log,
         photos: packagePhoto === null ? [] : [packagePhoto],
+        purchase: purchaseResult.purchase,
       },
       {
         onSuccess: (created) => {
@@ -244,6 +256,12 @@ function DoneSheet({ entry, onClose }: Props) {
             className={`${INPUT_CLASS} leading-relaxed`}
           />
         </div>
+
+        <PurchaseFields
+          form={purchaseForm}
+          errors={purchaseErrors}
+          onChange={setPurchaseForm}
+        />
 
         {errors.cycle !== undefined && (
           <p className="mt-3 text-[13px] text-overdue">{errors.cycle}</p>

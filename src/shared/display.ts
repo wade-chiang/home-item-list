@@ -1,4 +1,4 @@
-import type { IsoDate, ItemStatus, Log } from "./types.ts";
+import type { IsoDate, ItemStatus, Log, Purchase } from "./types.ts";
 
 // 顯示用的共用函式，只有一份實作：多個頁面都會組同樣的字串（首頁、物品頁、詳情頁）。
 
@@ -75,4 +75,15 @@ export function shortDaysText(status: ItemStatus, daysLeft: number): string {
     return `逾期 ${-daysLeft} 天`;
   }
   return `${daysLeft} 天`;
+}
+
+/**
+ * 更換歷史的價格：「400 元／捲」，數量大於 1 時加「× 2」；沒填單位時顯示「個」（照原型的 purchaseText()）
+ */
+export function purchaseText(
+  purchase: Pick<Purchase, "unitPrice" | "quantity" | "unit">,
+): string {
+  const unit = isFilled(purchase.unit) ? purchase.unit : "個";
+  const quantity = purchase.quantity > 1 ? ` × ${purchase.quantity}` : "";
+  return `${purchase.unitPrice} 元／${unit}${quantity}`;
 }

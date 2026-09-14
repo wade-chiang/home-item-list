@@ -9,5 +9,6 @@ export const queryKeys = {
   item: (id: ItemId) => ["items", id] as const,
   logs: ["logs"] as const,
   logsByItem: (itemId: ItemId) => ["logs", { itemId }] as const,
+  purchases: ["purchases"] as const,
   settings: ["settings"] as const,
 };

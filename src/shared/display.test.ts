@@ -6,6 +6,7 @@ import {
   displayName,
   formatMonthDay,
   isFilled,
+  purchaseText,
   shortDaysText,
 } from "./display.ts";
 import type { IsoDate } from "./types.ts";
@@ -83,5 +84,19 @@ describe("shortDaysText（物品頁用）", () => {
 
   it("暫停中只顯示「暫停」", () => {
     expect(shortDaysText("paused", -3)).toBe("暫停");
+  });
+});
+
+describe("purchaseText", () => {
+  it("單價、單位，數量 1 時不顯示數量", () => {
+    expect(purchaseText({ unitPrice: 400, quantity: 1, unit: "捲" })).toBe(
+      "400 元／捲",
+    );
+  });
+
+  it("數量大於 1 時加上 × N；沒填單位時是「個」；贈品是 0 元", () => {
+    expect(purchaseText({ unitPrice: 0, quantity: 3, unit: null })).toBe(
+      "0 元／個 × 3",
+    );
   });
 });

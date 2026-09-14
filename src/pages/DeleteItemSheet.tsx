@@ -10,7 +10,7 @@ import {
   restoreItemWithLogs,
 } from "../repo/index.ts";
 import { displayName } from "../shared/display.ts";
-import type { Log } from "../shared/types.ts";
+import type { Log, Purchase } from "../shared/types.ts";
 import type { ItemEntry } from "./itemEntries.ts";
 
 // 刪除物品的確認面板，版面照 docs/prototype/p0.html 的 openDeleteItem()（PRODUCT.md §5.5）。
@@ -20,10 +20,12 @@ type Props = {
   entry: ItemEntry;
   /** 這個物品所有的更換紀錄：顯示筆數，復原時整批寫回 */
   logs: readonly Log[];
+  /** 這些更換紀錄指向的採購紀錄：刪除時一起刪，復原時一起還原（P2-6 確認） */
+  purchases: readonly Purchase[];
   onClose: () => void;
 };
 
-function DeleteItemSheet({ entry, logs, onClose }: Props) {
+function DeleteItemSheet({ entry, logs, purchases, onClose }: Props) {
   const { item, location, category } = entry;
   const name = displayName(location.name, category.name, item.label);
   // 物品照片加上所有更換紀錄的耗材照片（照原型）
@@ -60,27 +62,34 @@ function DeleteItemSheet({ entry, logs, onClose }: Props) {
       setBackingUp(false);
     }
     const snapshot = { item, logs: [...logs], photos };
-    deleteItem.mutate(item.id, {
-      onSuccess: () => {
-        showToast({
-          message: `已刪除 ${name}`,
-          // 復原＝用原本的 id 把物品與所有更換紀錄建立回去（P1-17 確認）。
-          // 更換紀錄 999 筆以內都能復原（batch 上限 1000）；失敗時整批不寫入
-          onUndo: () => {
-            void restoreItemWithLogs(
-              snapshot.item,
-              snapshot.logs,
-              snapshot.photos,
-            )
-              .then(() => invalidateItemData(queryClient))
-              .catch(() => showToast({ message: "復原失敗，請稍後再試" }));
-          },
-        });
-        // 回到進詳情頁之前的那一頁（照原型回到來源分頁）。先換頁再重抓，詳情頁才不會閃一下「找不到這個物品」
-        goBack("/");
-        void invalidateItemData(queryClient);
+    deleteItem.mutate(
+      { id: item.id, logs },
+      {
+        onSuccess: (deletedPurchaseIds) => {
+          showToast({
+            message: `已刪除 ${name}`,
+            // 復原＝用原本的 id 把物品與所有更換紀錄建立回去（P1-17 確認）。
+            // 更換紀錄 999 筆以內都能復原（batch 上限 1000）；失敗時整批不寫入
+            onUndo: () => {
+              void restoreItemWithLogs(
+                snapshot.item,
+                snapshot.logs,
+                snapshot.photos,
+                // 只還原實際刪掉的；還被別的更換紀錄指向而沒刪的，重建會撞到同一個 id
+                purchases.filter((purchase) =>
+                  deletedPurchaseIds.includes(purchase.id),
+                ),
+              )
+                .then(() => invalidateItemData(queryClient))
+                .catch(() => showToast({ message: "復原失敗，請稍後再試" }));
+            },
+          });
+          // 回到進詳情頁之前的那一頁（照原型回到來源分頁）。先換頁再重抓，詳情頁才不會閃一下「找不到這個物品」
+          goBack("/");
+          void invalidateItemData(queryClient);
+        },
       },
-    });
+    );
   };
 
   return (
@@ -95,7 +104,7 @@ function DeleteItemSheet({ entry, logs, onClose }: Props) {
             和 <b className="text-ink-2">{photoCount} 張照片</b>
           </>
         )}
-        。
+        。{purchases.length > 0 && "這些紀錄裡的採購價格也會一起刪除。"}
       </p>
       <p className="mt-2 text-[13px] leading-relaxed text-ink-3">
         如果只是暫時不用，例如冬天的冷氣，可以改用「暫停」。

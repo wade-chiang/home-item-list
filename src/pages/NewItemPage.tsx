@@ -35,10 +35,12 @@ import {
   previewName,
 } from "./newItemForm.ts";
 import PackagePhotoButton from "./PackagePhotoButton.tsx";
+import { buildCostPurchase, type PurchaseFormErrors } from "./purchaseForm.ts";
+import PurchaseInputs from "./PurchaseInputs.tsx";
 import StagedPhotoField from "./StagedPhotoField.tsx";
 
 // 版面照 docs/prototype/p0.html 的 renderAdd()。
-// 這一步不做：花費（P2-8）。
+// 花費（P2-8）：沒有勾選框，有填單價就建立採購紀錄，跟物品一起送出。
 // 耗材包裝照片與物品照片先暫存在表單，按新增時跟物品與第一筆更換紀錄一起上傳（P2-3 確認）。
 
 const LAST_REPLACED_OPTIONS: { value: LastReplaced; label: string }[] = [
@@ -66,6 +68,10 @@ function NewItemForm({
   const createItem = useCreateItemWithFirstLog();
   const [packagePhoto, setPackagePhoto] = useState<File | null>(null);
   const [itemPhotos, setItemPhotos] = useState<File[]>([]);
+  // 花費區塊預設收合（照原型）；收合時不清空已填的內容
+  const [costOpen, setCostOpen] = useState(false);
+  const [cost, setCost] = useState({ price: "", quantity: "1", unit: "" });
+  const [costErrors, setCostErrors] = useState<PurchaseFormErrors>({});
   const queryClient = useQueryClient();
   const showToast = useToast();
   const navigate = useNavigate();
@@ -99,11 +105,16 @@ function NewItemForm({
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const result = buildNewItemSubmission(form, today);
-    if (!result.ok) {
-      setErrors(result.errors);
+    const costResult = buildCostPurchase(cost);
+    setErrors(result.ok ? {} : result.errors);
+    setCostErrors(costResult.ok ? {} : costResult.errors);
+    if (!costResult.ok) {
+      // 錯誤在收合的區塊裡時要展開，才看得到
+      setCostOpen(true);
+    }
+    if (!result.ok || !costResult.ok) {
       return;
     }
-    setErrors({});
     createItem.mutate(
       {
         item: result.item,
@@ -112,15 +123,17 @@ function NewItemForm({
           item: itemPhotos,
           firstLog: packagePhoto === null ? [] : [packagePhoto],
         },
+        purchase: costResult.purchase,
       },
       {
-        onSuccess: ({ item }) => {
+        onSuccess: ({ item, firstLog }) => {
           showToast({
             message: `已新增 ${preview}`,
             // 復原＝刪除剛新增的物品，更換紀錄會連帶刪除。
             // 這時新增頁已經離開，所以直接呼叫 repo 並自己讓資料重抓，不依賴這個元件的 hook
             onUndo: () => {
-              void deleteItem(item.id)
+              // 帶上第一筆更換紀錄：花費建立的採購紀錄一起刪
+              void deleteItem(item.id, [firstLog])
                 .then(() => invalidateItemData(queryClient))
                 .catch(() => showToast({ message: "復原失敗，請稍後再試" }));
             },
@@ -350,6 +363,31 @@ function NewItemForm({
           max={5}
           variant="item"
         />
+      </div>
+
+      {/* 花費（選填、預設收合），照原型的 data-cost-tg 區塊 */}
+      <div className="mt-4 rounded-xl border border-line bg-surface">
+        <button
+          type="button"
+          aria-expanded={costOpen}
+          onClick={() => setCostOpen(!costOpen)}
+          className="flex w-full items-center gap-2 px-3.5 py-3 text-left text-[14px]"
+        >
+          <span
+            className={`text-ink-3 transition-transform ${costOpen ? "rotate-90" : ""}`}
+          >
+            <ChevronRight size={15} strokeWidth={1.75} aria-hidden />
+          </span>
+          花費 <span className="text-ink-3">選填</span>
+        </button>
+        {costOpen && (
+          <PurchaseInputs
+            form={cost}
+            errors={costErrors}
+            onChange={setCost}
+            className="border-t border-line-2 px-3.5 pb-3.5 pt-3"
+          />
+        )}
       </div>
 
       {/* 送出失敗時的訊息放在按鈕正上方：按下新增時視線在這裡，放表單最上方會看不到 */}

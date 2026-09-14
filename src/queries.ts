@@ -18,14 +18,16 @@ import {
   listItems,
   listLocations,
   listLogs,
+  listPurchases,
   type NewItem,
   type NewLog,
+  type NewPurchase,
+  saveLogWithPurchase,
   updateCategory,
   updateDefaultLeadDays,
   updateItemPause,
   updateItemWithLatestLog,
   updateLocation,
-  updateLog,
 } from "./repo/index.ts";
 import type {
   CategoryId,
@@ -34,6 +36,7 @@ import type {
   ItemPause,
   LocationId,
   Log,
+  Purchase,
 } from "./shared/types.ts";
 
 // 各頁共用的查詢：key 與 repo 函式在這裡綁在一起，頁面不用自己記 key。
@@ -55,17 +58,25 @@ export function useLogs() {
   return useQuery({ queryKey: queryKeys.logs, queryFn: listLogs });
 }
 
+export function usePurchases() {
+  return useQuery({ queryKey: queryKeys.purchases, queryFn: listPurchases });
+}
+
 export function useSettings() {
   return useQuery({ queryKey: queryKeys.settings, queryFn: getSettings });
 }
 
-/** 物品或更換紀錄有變動後呼叫：首頁、物品頁、詳情頁都由這兩份資料組成，兩份一起重抓 */
+/**
+ * 物品或更換紀錄有變動後呼叫：首頁、物品頁、詳情頁都由這些資料組成，一起重抓。
+ * 採購紀錄跟著更換紀錄建立與刪除（P2-6），所以也一起重抓
+ */
 export async function invalidateItemData(
   queryClient: QueryClient,
 ): Promise<void> {
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: queryKeys.items }),
     queryClient.invalidateQueries({ queryKey: queryKeys.logs }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.purchases }),
   ]);
 }
 
@@ -139,11 +150,13 @@ export function useCreateLogClearingPause() {
       itemId,
       log,
       photos,
+      purchase,
     }: {
       itemId: ItemId;
       log: NewLog;
       photos: readonly Blob[];
-    }) => createLogClearingPause(itemId, log, photos),
+      purchase: NewPurchase | null;
+    }) => createLogClearingPause(itemId, log, photos, purchase),
     onSuccess: () => invalidateItemData(queryClient),
   });
 }
@@ -156,11 +169,13 @@ export function useCreateLog() {
       itemId,
       log,
       photos,
+      purchase,
     }: {
       itemId: ItemId;
       log: NewLog;
       photos: readonly Blob[];
-    }) => createLog(itemId, log, photos),
+      purchase: NewPurchase | null;
+    }) => createLog(itemId, log, photos, purchase),
     onSuccess: () => invalidateItemData(queryClient),
   });
 }
@@ -180,14 +195,31 @@ export function useUpdateItemWithLatestLog() {
  * 這裡若先等重抓完成，詳情頁會在換頁前閃一下「找不到這個物品」。
  */
 export function useDeleteItem() {
-  return useMutation({ mutationFn: deleteItem });
+  return useMutation({
+    mutationFn: ({
+      id,
+      logs,
+    }: {
+      id: ItemId;
+      /** 用來一起刪除它們的採購紀錄（P2-6） */
+      logs: readonly Pick<Log, "id" | "purchaseId">[];
+    }) => deleteItem(id, logs),
+  });
 }
 
-/** 編輯更換紀錄：只更新這一筆 */
-export function useUpdateLog() {
+/** 編輯更換紀錄：連同「這次有買新的」的採購紀錄一起存（P2-8） */
+export function useSaveLogWithPurchase() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: updateLog,
+    mutationFn: ({
+      log,
+      before,
+      after,
+    }: {
+      log: Log;
+      before: Purchase | null;
+      after: NewPurchase | null;
+    }) => saveLogWithPurchase(log, before, after),
     onSuccess: () => invalidateItemData(queryClient),
   });
 }
@@ -208,11 +240,13 @@ export function useCreateItemWithFirstLog() {
       item,
       firstLog,
       photos,
+      purchase,
     }: {
       item: NewItem;
       firstLog: NewLog;
       photos: { item: readonly Blob[]; firstLog: readonly Blob[] };
-    }) => createItemWithFirstLog(item, firstLog, photos),
+      purchase: NewPurchase | null;
+    }) => createItemWithFirstLog(item, firstLog, photos, purchase),
     onSuccess: () => invalidateItemData(queryClient),
   });
 }

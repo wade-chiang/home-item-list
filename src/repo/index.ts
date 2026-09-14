@@ -8,6 +8,8 @@ import type {
   LocationId,
   Log,
   LogId,
+  Purchase,
+  PurchaseId,
   Settings,
 } from "../shared/types.ts";
 import { pb } from "./client.ts";
@@ -20,6 +22,8 @@ import {
   toLocation,
   toLog,
   toLogRecord,
+  toPurchase,
+  toPurchaseRecord,
   toSettings,
 } from "./records.ts";
 
@@ -117,6 +121,42 @@ export async function listLogsByItem(itemId: ItemId): Promise<Log[]> {
   return records.map(toLog);
 }
 
+/** 新增採購紀錄的輸入：id 由 repo 層產生 */
+export type NewPurchase = Omit<Purchase, "id">;
+
+export async function listPurchases(): Promise<Purchase[]> {
+  const records = await pb.collection("purchases").getFullList();
+  return records.map(toPurchase);
+}
+
+/**
+ * 這些採購紀錄裡，除了 logIds 這幾筆更換紀錄以外沒有別人指向的（刪除更換紀錄時才能一起刪，P2-6 確認）。
+ * 規格允許一筆採購對應多次更換，目前的畫面只會建立一對一，但仍先查過，避免刪掉別的紀錄還在用的採購
+ */
+async function purchasesOnlyUsedBy(
+  purchaseIds: readonly PurchaseId[],
+  logIds: readonly LogId[],
+): Promise<PurchaseId[]> {
+  const unique = [...new Set(purchaseIds)];
+  if (unique.length === 0) {
+    return [];
+  }
+  const expression = unique.map((_, index) => `purchase = {:p${index}}`);
+  const params = Object.fromEntries(
+    unique.map((id, index) => [`p${index}`, id]),
+  );
+  const referencing = await pb.collection("logs").getFullList({
+    filter: pb.filter(expression.join(" || "), params),
+    fields: "id,purchase",
+  });
+  const usedElsewhere = new Set(
+    referencing
+      .filter((record) => !logIds.includes(record.id as LogId))
+      .map((record) => String(record.purchase)),
+  );
+  return unique.filter((id) => !usedElsewhere.has(id));
+}
+
 export async function getSettings(): Promise<Settings> {
   return toSettings(await pb.collection("settings").getFullList());
 }
@@ -144,6 +184,7 @@ export async function createItemWithFirstLog(
     item: [],
     firstLog: [],
   },
+  purchase: NewPurchase | null = null,
 ): Promise<{ item: Item; firstLog: Log }> {
   const itemId = newRecordId() as ItemId;
   const batch = pb.createBatch();
@@ -151,14 +192,13 @@ export async function createItemWithFirstLog(
     ...toItemRecord({ ...item, id: itemId }),
     photos: [...photos.item],
   });
-  batch.collection("logs").create({
-    ...toLogRecord({ ...firstLog, id: newRecordId() as LogId, itemId }),
-    photos: [...photos.firstLog],
-  });
-  const [itemResult, logResult] = await batch.send();
+  // 新增物品頁的「花費」建立的採購紀錄也在同一個 batch（P2-8）
+  const logIndex =
+    1 + addLogCreation(batch, itemId, firstLog, photos.firstLog, purchase);
+  const results = await batch.send();
   return {
-    item: toItem(itemResult.body),
-    firstLog: toLog(logResult.body),
+    item: toItem(results[0].body),
+    firstLog: toLog(results[logIndex].body),
   };
 }
 
@@ -194,8 +234,13 @@ export async function restoreItemWithLogs(
   item: Item,
   logs: readonly Log[],
   photos: ItemPhotoBackup = { item: [], logs: new Map() },
+  purchases: readonly Purchase[] = [],
 ): Promise<void> {
   const batch = pb.createBatch();
+  // 採購紀錄要先建立，更換紀錄才指得到它（P2-6 確認：刪除時一起刪，復原時一起還原）
+  for (const purchase of purchases) {
+    batch.collection("purchases").create(toPurchaseRecord(purchase));
+  }
   // 照片跟紀錄放在同一個 batch 重新上傳（P2-3 確認）：SDK 看到檔案會改用 multipart，整批仍是單一交易。
   // 檔名會變成新的，內容相同
   batch
@@ -269,24 +314,54 @@ export async function createLogClearingPause(
   itemId: ItemId,
   log: NewLog,
   photos: readonly Blob[] = [],
+  purchase: NewPurchase | null = null,
 ): Promise<Log> {
   const batch = pb.createBatch();
+  const logIndex = addLogCreation(batch, itemId, log, photos, purchase);
+  batch.collection("items").update(itemId, { paused: false, pausedUntil: "" });
+  const results = await batch.send();
+  return toLog(results[logIndex].body);
+}
+
+/**
+ * 把「建立更換紀錄」加進 batch；這次有買新的就先建立採購紀錄，更換紀錄指向它（P2-6、P2-7）。
+ * 採購紀錄的 id 由前端先產生：batch 內拿不到前一個請求建立的 id（CLAUDE.md「PocketBase 有三個預設值要改」）。
+ * 回傳更換紀錄在 batch 結果裡的位置
+ */
+function addLogCreation(
+  batch: ReturnType<typeof pb.createBatch>,
+  itemId: ItemId,
+  log: NewLog,
+  photos: readonly Blob[],
+  purchase: NewPurchase | null,
+): number {
+  let purchaseId = log.purchaseId;
+  let index = 0;
+  if (purchase !== null) {
+    purchaseId = newRecordId() as PurchaseId;
+    batch
+      .collection("purchases")
+      .create(toPurchaseRecord({ ...purchase, id: purchaseId }));
+    index = 1;
+  }
   batch.collection("logs").create({
-    ...toLogRecord({ ...log, id: newRecordId() as LogId, itemId }),
+    ...toLogRecord({ ...log, purchaseId, id: newRecordId() as LogId, itemId }),
     photos: [...photos],
   });
-  batch.collection("items").update(itemId, { paused: false, pausedUntil: "" });
-  const [logResult] = await batch.send();
-  return toLog(logResult.body);
+  return index;
 }
 
 /** createLogClearingPause 的「復原」：刪掉剛寫入的紀錄並恢復原本的暫停，放在同一個 batch */
 export async function undoLogClearingPause(
-  created: Pick<Log, "id" | "itemId">,
+  created: Pick<Log, "id" | "itemId" | "purchaseId">,
   previousPause: ItemPause,
 ): Promise<void> {
   const batch = pb.createBatch();
   batch.collection("logs").delete(created.id);
+  // 這次一起建立的採購紀錄也刪掉；它是剛建立的，只有這筆更換紀錄指向它
+  if (created.purchaseId !== null) {
+    batch.collection("purchases").delete(created.purchaseId);
+  }
   batch.collection("items").update(created.itemId, {
     paused: previousPause.paused,
     pausedUntil: previousPause.pausedUntil ?? "",
@@ -365,21 +440,36 @@ export async function createLog(
   itemId: ItemId,
   log: NewLog,
   photos: readonly Blob[] = [],
+  purchase: NewPurchase | null = null,
 ): Promise<Log> {
-  // 耗材照片跟紀錄在同一個請求建立（P2-3 確認）：SDK 看到檔案會改用 multipart
-  const record = await pb.collection("logs").create({
-    ...toLogRecord({ ...log, id: newRecordId() as LogId, itemId }),
-    photos: [...photos],
-  });
-  return toLog(record);
+  // 耗材照片（P2-3）與採購紀錄（P2-7）跟更換紀錄在同一個 batch 建立：任一筆失敗都不會留下
+  const batch = pb.createBatch();
+  const logIndex = addLogCreation(batch, itemId, log, photos, purchase);
+  const results = await batch.send();
+  return toLog(results[logIndex].body);
 }
 
 /**
  * 刪除物品。PocketBase 會連帶刪除它的更換紀錄（P1-5 的 cascadeDelete）。
  * 新增後的「復原」（P1-14）與刪除物品（P1-17）都用這個函式。
  */
-export async function deleteItem(id: ItemId): Promise<void> {
-  await pb.collection("items").delete(id);
+export async function deleteItem(
+  id: ItemId,
+  logs: readonly Pick<Log, "id" | "purchaseId">[] = [],
+): Promise<PurchaseId[]> {
+  // 更換紀錄的採購紀錄一起刪（P2-6 確認）。先刪物品（更換紀錄連帶刪除），再刪採購紀錄，放在同一個 batch
+  const purchaseIds = await purchasesOnlyUsedBy(
+    logs.flatMap((log) => (log.purchaseId === null ? [] : [log.purchaseId])),
+    logs.map((log) => log.id),
+  );
+  const batch = pb.createBatch();
+  batch.collection("items").delete(id);
+  for (const purchaseId of purchaseIds) {
+    batch.collection("purchases").delete(purchaseId);
+  }
+  await batch.send();
+  // 回傳實際刪掉的採購紀錄：復原時只還原這些，還被別人指向而沒刪的不能重建（id 會重複）
+  return purchaseIds;
 }
 
 /** 刪除更換紀錄時，這個物品只剩這一筆。畫面上已經停用刪除鍵，這是 repo 層的第二道把關 */
@@ -399,8 +489,8 @@ export class LastLogError extends Error {
  * 換好了之後的「復原」（P1-15）與編輯面板的刪除（P1-18）都用這個函式。
  */
 export async function deleteLog(
-  log: Pick<Log, "id" | "itemId">,
-): Promise<void> {
+  log: Pick<Log, "id" | "itemId" | "purchaseId">,
+): Promise<PurchaseId[]> {
   const { totalItems } = await pb.collection("logs").getList(1, 1, {
     filter: pb.filter("item = {:itemId}", { itemId: log.itemId }),
     fields: "id",
@@ -408,14 +498,105 @@ export async function deleteLog(
   if (totalItems <= 1) {
     throw new LastLogError();
   }
-  await pb.collection("logs").delete(log.id);
+  // 它的採購紀錄沒有別的更換紀錄指向時一起刪（P2-6 確認），放在同一個 batch
+  const purchaseIds = await purchasesOnlyUsedBy(
+    log.purchaseId === null ? [] : [log.purchaseId],
+    [log.id],
+  );
+  const batch = pb.createBatch();
+  batch.collection("logs").delete(log.id);
+  for (const purchaseId of purchaseIds) {
+    batch.collection("purchases").delete(purchaseId);
+  }
+  await batch.send();
+  // 回傳實際刪掉的採購紀錄，理由同 deleteItem
+  return purchaseIds;
 }
 
-/** 編輯更換紀錄：只更新這一筆。存檔後的「復原」也用這個函式，把它改回原本的值 */
-export async function updateLog(log: Log): Promise<Log> {
-  // id 放在網址上，不放進內容；建立時間由 PocketBase 管理，不送出
-  const { id, ...body } = toLogRecord(log);
-  return toLog(await pb.collection("logs").update(id, body));
+/** 更換紀錄存檔後，採購紀錄變成什麼樣子：復原時交給 revertLogWithPurchase 還原 */
+export type SavedLogPurchase = {
+  log: Log;
+  /** 存檔後這筆指向的採購紀錄 */
+  purchase: Purchase | null;
+  /** 這次取消勾選而實際刪掉的採購紀錄；還被別的更換紀錄指向而沒刪時是 null */
+  deletedPurchaseId: PurchaseId | null;
+};
+
+/**
+ * 編輯更換紀錄連同「這次有買新的」存檔（P2-8），更換紀錄與採購紀錄的變動放在同一個 batch：
+ * - 原本沒有、這次勾了 → 建立採購紀錄並指向它
+ * - 原本有、這次也勾 → 直接改原本那筆（P2-8 確認），id 不變
+ * - 原本有、這次取消勾選 → 解除關聯；沒有別的更換紀錄指向時刪掉它（P2-8 確認，規則同 deleteLog）
+ */
+export async function saveLogWithPurchase(
+  log: Log,
+  before: Purchase | null,
+  after: NewPurchase | null,
+): Promise<SavedLogPurchase> {
+  const batch = pb.createBatch();
+  let purchase: Purchase | null = null;
+  let deletedPurchaseId: PurchaseId | null = null;
+
+  if (after !== null) {
+    purchase = { ...after, id: before?.id ?? (newRecordId() as PurchaseId) };
+    if (before === null) {
+      batch.collection("purchases").create(toPurchaseRecord(purchase));
+    } else {
+      const { id, ...body } = toPurchaseRecord(purchase);
+      batch.collection("purchases").update(id, body);
+    }
+  }
+
+  const written: Log = { ...log, purchaseId: purchase?.id ?? null };
+  const { id: logId, ...logBody } = toLogRecord(written);
+  batch.collection("logs").update(logId, logBody);
+
+  if (after === null && before !== null) {
+    const [deletable] = await purchasesOnlyUsedBy([before.id], [log.id]);
+    if (deletable !== undefined) {
+      // 放在更新更換紀錄之後：先解除關聯再刪
+      batch.collection("purchases").delete(deletable);
+      deletedPurchaseId = deletable;
+    }
+  }
+
+  const results = await batch.send();
+  const logResult = results[after !== null ? 1 : 0];
+  return { log: toLog(logResult.body), purchase, deletedPurchaseId };
+}
+
+/**
+ * saveLogWithPurchase 的「復原」：更換紀錄改回原本的值，採購紀錄也回到原狀，放在同一個 batch
+ */
+export async function revertLogWithPurchase(
+  original: Log,
+  originalPurchase: Purchase | null,
+  saved: SavedLogPurchase,
+): Promise<void> {
+  const batch = pb.createBatch();
+
+  // 原本有、存檔時被刪掉 → 用原本的 id 建回來（要在更換紀錄指向它之前）
+  if (
+    originalPurchase !== null &&
+    saved.deletedPurchaseId === originalPurchase.id
+  ) {
+    batch.collection("purchases").create(toPurchaseRecord(originalPurchase));
+  }
+  // 原本有、存檔時改了值 → 改回舊值
+  if (originalPurchase !== null && saved.purchase?.id === originalPurchase.id) {
+    const { id, ...body } = toPurchaseRecord(originalPurchase);
+    batch.collection("purchases").update(id, body);
+  }
+
+  const { id: logId, ...logBody } = toLogRecord(original);
+  batch.collection("logs").update(logId, logBody);
+
+  // 原本沒有、這次新建的 → 更換紀錄不再指向它之後刪掉
+  if (originalPurchase === null && saved.purchase !== null) {
+    batch.collection("purchases").delete(saved.purchase.id);
+  }
+
+  await batch.send();
 }
 
 /**
@@ -425,9 +606,13 @@ export async function updateLog(log: Log): Promise<Log> {
 export async function restoreLog(
   log: Log,
   photos: readonly Blob[] = [],
+  purchase: Purchase | null = null,
 ): Promise<void> {
-  // 耗材照片跟紀錄一起重新上傳（P2-3 確認），檔名會變成新的
-  await pb
-    .collection("logs")
-    .create({ ...toLogRecord(log), photos: [...photos] });
+  // 耗材照片（P2-3）與被一起刪掉的採購紀錄（P2-6）跟紀錄放在同一個 batch 還原；照片檔名會變成新的
+  const batch = pb.createBatch();
+  if (purchase !== null) {
+    batch.collection("purchases").create(toPurchaseRecord(purchase));
+  }
+  batch.collection("logs").create({ ...toLogRecord(log), photos: [...photos] });
+  await batch.send();
 }
