@@ -127,7 +127,8 @@ const iso = d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${S
 const md = d=>`${d.getMonth()+1}/${d.getDate()}`;
 const parseISO = s=>{ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); };
 const esc = s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const nextMay = `${today.getFullYear()+1}-05-01`;
+// 下一個 5/1：今天在 5/1 之前是今年，當天或之後是明年（P2-1 決定，原本寫死明年）
+const nextMay = `${today < new Date(today.getFullYear(),4,1) ? today.getFullYear() : today.getFullYear()+1}-05-01`;
 
 /* ================= 假資料 ================= */
 const LOCS = [
@@ -810,7 +811,7 @@ function openPause(id){
   let pick = null, custom = iso(addDays(today,120));
   const opts = [
     {k:'3m', t:'3 個月後', d:iso(addDays(today,90))},
-    {k:'may', t:'明年 5 月', d:nextMay},
+    {k:'may', t:'5 月 1 日', d:nextMay},
     {k:'pick', t:'指定日期', d:null},
   ];
   const {scrim, body, close} = makeSheet();

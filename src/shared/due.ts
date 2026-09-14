@@ -52,14 +52,25 @@ export function daysUntilDue(due: IsoDate, today: IsoDate): number {
   return daysBetween(today, due);
 }
 
+/**
+ * 現在是否暫停中。到了預計恢復日（今天 >= pausedUntil）就當成已恢復（P2-1 確認：推導，不寫回資料庫）。
+ *
+ * 資料庫裡可能留著「paused 是 true、但日期已過」的物品，所以**畫面與判斷一律呼叫這個函式，不要直接看 item.paused**。
+ * 沒有伺服器排程也成立：首頁、物品頁、詳情頁與 P3 的本地通知都用同一個判斷，離線時也一樣。
+ */
+export function isPaused(item: Item, today: IsoDate): boolean {
+  // YYYY-MM-DD 的字串順序就是日期先後
+  return item.paused && today < item.pausedUntil;
+}
+
 /** 狀態，由上而下先中先算（PRODUCT.md §3.2）：暫停 → 逾期 → 即將到期 → 正常 */
 export function calcStatus(
   item: Item,
   due: IsoDate,
   today: IsoDate,
 ): ItemStatus {
-  // 到 pausedUntil 自動恢復屬於 P2-1：屆時決定要寫回資料庫，還是在這裡推導。目前只看 paused
-  if (item.paused) {
+  // 恢復後到期日不順延暫停的天數（P2-1 確認）：冬天暫停的冷氣濾網到 5 月恢復時通常直接逾期，正好提醒檢查
+  if (isPaused(item, today)) {
     return "paused";
   }
   const daysLeft = daysUntilDue(due, today);

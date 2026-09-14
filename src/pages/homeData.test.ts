@@ -85,7 +85,7 @@ describe("buildHomeData", () => {
       "itemB",
       "itemA",
     ]);
-    expect(home.activeCount).toBe(3);
+    expect(home.totalCount).toBe(3);
   });
 
   it("有逾期物品的位置置頂", () => {
@@ -147,7 +147,30 @@ describe("buildHomeData", () => {
       "itemA",
     ]);
     expect(home.counts.ok).toBe(1);
-    expect(home.activeCount).toBe(1);
+    expect(home.totalCount).toBe(2);
+    expect(home.paused).toEqual({ count: 1, locationNames: ["主臥"] });
+  });
+
+  it("到了預計恢復日的物品回到位置區塊，不算暫停", () => {
+    const resumed: Item = {
+      ...item("resumed", "loc1", "cat1"),
+      paused: true,
+      pausedUntil: today,
+    };
+    const logs = [log("logResumed", "resumed", "2026-09-10", 30)];
+
+    const home = buildHomeData({
+      locations,
+      categories,
+      items: [resumed],
+      logs,
+      today,
+    });
+
+    expect(home.groups[0].items.map((entry) => entry.item.id)).toEqual([
+      "resumed",
+    ]);
+    expect(home.paused).toEqual({ count: 0, locationNames: [] });
   });
 
   it("沒有物品的位置不顯示", () => {

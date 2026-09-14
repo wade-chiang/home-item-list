@@ -3,6 +3,7 @@ import type {
   CategoryId,
   Item,
   ItemId,
+  ItemPause,
   Location,
   LocationId,
   Log,
@@ -189,6 +190,53 @@ export async function restoreItemWithLogs(
   for (const log of oldestFirst) {
     batch.collection("logs").create(toLogRecord(log));
   }
+  await batch.send();
+}
+
+/**
+ * 暫停或恢復：只改 paused 與 pausedUntil（P2-1）。恢復時傳 { paused: false, pausedUntil: null }。
+ * 暫停與恢復後的「復原」也用這個函式，傳回原本的值
+ */
+export async function updateItemPause(
+  itemId: ItemId,
+  pause: ItemPause,
+): Promise<Item> {
+  const record = await pb.collection("items").update(itemId, {
+    paused: pause.paused,
+    // PocketBase 存不了 null，沒有暫停時存空字串（CLAUDE.md「型別要自己顧」）
+    pausedUntil: pause.pausedUntil ?? "",
+  });
+  return toItem(record);
+}
+
+/**
+ * 暫停中的物品按「換好了」：寫入更換紀錄並取消暫停，放在同一個 batch（PRODUCT.md §5.1）。
+ * 「暫停中」看的是資料庫的 paused 旗標：日期已過、推導上已恢復的物品也順便清掉旗標
+ */
+export async function createLogClearingPause(
+  itemId: ItemId,
+  log: NewLog,
+): Promise<Log> {
+  const batch = pb.createBatch();
+  batch
+    .collection("logs")
+    .create(toLogRecord({ ...log, id: newRecordId() as LogId, itemId }));
+  batch.collection("items").update(itemId, { paused: false, pausedUntil: "" });
+  const [logResult] = await batch.send();
+  return toLog(logResult.body);
+}
+
+/** createLogClearingPause 的「復原」：刪掉剛寫入的紀錄並恢復原本的暫停，放在同一個 batch */
+export async function undoLogClearingPause(
+  created: Pick<Log, "id" | "itemId">,
+  previousPause: ItemPause,
+): Promise<void> {
+  const batch = pb.createBatch();
+  batch.collection("logs").delete(created.id);
+  batch.collection("items").update(created.itemId, {
+    paused: previousPause.paused,
+    pausedUntil: previousPause.pausedUntil ?? "",
+  });
   await batch.send();
 }
 

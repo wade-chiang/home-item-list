@@ -10,6 +10,7 @@ import {
   createItemWithFirstLog,
   createLocation,
   createLog,
+  createLogClearingPause,
   deleteItem,
   deleteLog,
   getSettings,
@@ -21,6 +22,7 @@ import {
   type NewLog,
   updateCategory,
   updateDefaultLeadDays,
+  updateItemPause,
   updateItemWithLatestLog,
   updateLocation,
   updateLog,
@@ -29,6 +31,7 @@ import type {
   CategoryId,
   Item,
   ItemId,
+  ItemPause,
   LocationId,
   Log,
 } from "./shared/types.ts";
@@ -115,6 +118,26 @@ export function useUpdateDefaultLeadDays() {
     mutationFn: updateDefaultLeadDays,
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: queryKeys.settings }),
+  });
+}
+
+/** 暫停或恢復物品 */
+export function useUpdateItemPause() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, pause }: { itemId: ItemId; pause: ItemPause }) =>
+      updateItemPause(itemId, pause),
+    onSuccess: () => invalidateItemData(queryClient),
+  });
+}
+
+/** 換好了：暫停中的物品寫入更換紀錄並取消暫停 */
+export function useCreateLogClearingPause() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, log }: { itemId: ItemId; log: NewLog }) =>
+      createLogClearingPause(itemId, log),
+    onSuccess: () => invalidateItemData(queryClient),
   });
 }
 

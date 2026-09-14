@@ -1,3 +1,4 @@
+import { ChevronRight, Pause } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
 import EmptyItemsState from "../components/EmptyItemsState.tsx";
@@ -13,7 +14,7 @@ import type { ItemEntry } from "./itemEntries.ts";
 import { useItemEntriesData } from "./useItemEntriesData.ts";
 
 // 版面照 docs/prototype/p0.html 的 renderHome()。
-// 快速篩選（點數量方塊）是 P2-10，所以數量方塊這一步不是按鈕；「N 項已暫停」是 P2-2。
+// 快速篩選（點數量方塊）是 P2-10，所以數量方塊這一步不是按鈕。
 
 const FROM_HOME: NavState = { from: "home" };
 
@@ -142,6 +143,36 @@ function GroupSection({
   );
 }
 
+/**
+ * 首頁最下方常駐的「N 項已暫停」（P2-2），照原型。點了到物品頁，暫停中的物品排在各類別最後。
+ * 常駐、不可收合：暫停會靜默失效，要讓它不會從視野裡消失（CLAUDE.md「暫停會靜默失效」）。
+ * 0 項時也顯示，只是不列位置。
+ */
+function PausedSummary({ paused }: { paused: HomeData["paused"] }) {
+  return (
+    <Link
+      to="/items"
+      className="mt-7 flex w-full items-center gap-3 rounded-xl border border-line bg-surface-2 px-3.5 py-3 text-left"
+    >
+      <span className="text-paused">
+        <Pause size={17} strokeWidth={1.75} aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1 text-[14px] text-ink-2">
+        {paused.count} 項已暫停
+        {paused.locationNames.length > 0 && (
+          <span className="text-ink-3">
+            {" "}
+            · {paused.locationNames.join("、")}
+          </span>
+        )}
+      </span>
+      <span className="text-ink-3">
+        <ChevronRight size={16} strokeWidth={1.75} aria-hidden />
+      </span>
+    </Link>
+  );
+}
+
 /** 載入中：用骨架灰塊佔位，避免資料回來時畫面跳動。原型沒有這個狀態 */
 function HomeSkeleton() {
   return (
@@ -173,7 +204,7 @@ function HomePage() {
           <LoadErrorState error={error} onRetry={retry} />
         ) : home === null ? (
           <HomeSkeleton />
-        ) : home.activeCount === 0 ? (
+        ) : home.totalCount === 0 ? (
           <EmptyItemsState />
         ) : (
           <>
@@ -185,6 +216,7 @@ function HomePage() {
                 onDone={setDoneEntry}
               />
             ))}
+            <PausedSummary paused={home.paused} />
           </>
         )}
       </main>

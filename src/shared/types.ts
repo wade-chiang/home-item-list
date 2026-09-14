@@ -29,7 +29,8 @@ export type Category = {
 };
 
 /** 暫停時必須有預計恢復日（CLAUDE.md「暫停會靜默失效」），用型別排除「暫停但沒有恢復日」 */
-type ItemPause =
+/** 暫停中才有預計恢復日（PRODUCT.md §2），用型別排除兩者不一致 */
+export type ItemPause =
   { paused: false; pausedUntil: null } | { paused: true; pausedUntil: IsoDate };
 
 export type Item = {

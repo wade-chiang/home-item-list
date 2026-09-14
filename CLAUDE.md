@@ -91,6 +91,7 @@ src/
     types.ts         領域型別（手寫維護，見「型別要自己顧」）
   pages/
   components/
+  preferences.ts     這支手機自己的偏好（外觀），存在 localStorage，不是資料庫的資料，所以不在 repo/
 pb_migrations/       PocketBase collection 定義（**進 git**）
 pb_public/           前端 build 產物（不進 git）
 pb_data/             PocketBase 資料與照片（volume，不進 git）
@@ -199,7 +200,7 @@ due = 最近一筆更換紀錄的日期 + 該筆的週期
 
 兩個防呆都要做，不要省：
 
-1. 暫停時**必須**填 `pausedUntil`（預計恢復日），到日期自動恢復
+1. 暫停時**必須**填 `pausedUntil`（預計恢復日），到日期自動恢復。由 `src/shared/due.ts` 的 `isPaused()` 推導，不寫回資料庫；資料庫裡可能留著日期已過的 `paused = true`，**畫面與判斷一律呼叫 `isPaused()`，不要直接看 `item.paused`**（P2-1 決定）
 2. 首頁最下方**常駐**顯示「N 項已暫停」，讓它不會從視野裡消失
 
 ### 首頁篩選不要記住
@@ -244,7 +245,50 @@ v0.40.3 原始碼確認：rule 為 `null` 時只有管理員能存取（其他�
 
 ## 指令
 
-*P1 建立專案骨架後補上實際指令。*
+套件管理用 pnpm（版本由 `package.json` 的 `packageManager` 固定）。
+
+### 開發
+
+```sh
+pnpm install
+docker compose up -d   # PocketBase，http://127.0.0.1:8090；後台 http://127.0.0.1:8090/_/
+pnpm dev               # Vite 開發伺服器；/api 轉到 127.0.0.1:8090（vite.config.ts）
+```
+
+### 檢查（交付前全部要過）
+
+```sh
+pnpm test           # Vitest
+pnpm lint           # oxlint，含 type-aware 檢查
+pnpm format:check   # Prettier；要自動修正用 pnpm format
+pnpm build          # tsc -b 型別檢查 ＋ vite build
+```
+
+### 更新手機上看到的版本
+
+前端是在 build image 時打包進容器的，改完程式要重建，手機（區網連 8090）才看得到：
+
+```sh
+docker compose up -d --build
+```
+
+`pb_migrations/` 裡新的 migration 在 PocketBase 啟動時套用，重建或重啟容器才會生效。只加 migration、沒改前端時，`docker compose restart` 應該也夠（未實測）。
+
+### 備份 `pb_data`
+
+先停容器，避免複製到寫到一半的資料庫。備份不要放 `/ramdisk`，重開機會消失。
+
+```sh
+docker compose stop
+cp -a pb_data <備份位置>/pb_data-$(date +%F-%H%M)
+docker compose start
+```
+
+還原（未實測）：`docker compose stop`，把 `pb_data` 換成備份，再 `docker compose start`。
+
+### commit
+
+明確指定檔案（例如 `git add CLAUDE.md docs/`），不要用 `git add -A`：沙箱會在專案根目錄掛出空的設定檔（見 `.gitignore` 的說明），`-A` 會把它們收進去。
 
 ---
 
@@ -252,7 +296,7 @@ v0.40.3 原始碼確認：rule 為 `null` 時只有管理員能存取（其他�
 
 | 決定 | 理由 |
 |---|---|
-| **PocketBase（暫定，見下方退場條件）** | 這個專案的後端終將消失（P3 全部搬上裝置），所以「寫最少的鷹架」比「後端寫得漂亮」重要。PocketBase 讓後端程式碼接近零，還內建檔案上傳、on-demand 縮圖、admin 後台與備份 API |
+| **PocketBase（暫定；P1-21 檢核後續用，P2 結束前再檢核）** | 這個專案的後端終將消失（P3 全部搬上裝置），所以「寫最少的鷹架」比「後端寫得漂亮」重要。PocketBase 讓後端程式碼接近零，還內建檔案上傳、on-demand 縮圖、admin 後台與備份 API |
 | **P3 不把 PocketBase 包進 app，改用裝置上的 SQLite** | 技術上可行（社群用 gomobile 編成 Android/iOS 套件，在 app 內跑一個 localhost 伺服器），但官方不支援；唯一的社群專案 pocketbase_mobile 停在 v0.24.4，2025-01 後沒更新（官方已到 v0.40.3）；Capacitor 沒有現成外掛，要自己寫 Kotlin／Swift 包裝。為了省下 P3 重寫 `src/repo/` 的成本，換來一個卡在舊版、要自己維護的原生依賴，不划算。2026-09-11 查證 |
 | **P1、P2 維持 PocketBase 網頁版，不從 P1 就做 Capacitor app** | 2026-09-11 評估過「P1 直接做 app、資料存裝置上的 SQLite」：可省掉 PocketBase、Docker、P3 的 `src/repo/` 重寫與資料搬遷；代價是 P1 就要架 Android 建置環境、沒有 admin 後台與現成縮圖。已知 PocketBase 的照片與備份功能到 P3 仍要在 app 內重做。維持現規劃的理由：想最快開始用，網頁版從骨架到手機能用的路徑最短；Android 建置（SDK、打包、安裝）的成本留到 P3 再付 |
 | **SQLite，不是 Postgres** | 單人使用沒有併發問題；備份就是複製一個目錄；資料結構直接就是未來 app 版要用的結構 |
@@ -285,6 +329,15 @@ v0.40.3 原始碼確認：rule 為 `null` 時只有管理員能存取（其他�
 2. 手寫 TS 型別與 PocketBase schema drift 造成的 bug 反覆出現，zod 邊界擋不住
 3. 升級時遇到 v0.23 等級的破壞性改版
 4. 需要的查詢 PocketBase 做不到，被迫寫 pb_hooks
+
+**P1-21 檢核結果（2026-09-14）：四項都未觸發，續用到 P2 結束前再檢核一次（P2-14）。**
+
+1. 權限：P1 的讀寫都沒被擋。但 P2-13 會碰到限制——備份 API 需要超級管理員登入（v0.40.3 `apis/backup.go`），前端沒有登入不能直接呼叫
+2. 型別：zod 擋下了零值與不存在的日期，P1 期間沒有型別不一致的 bug；`photos`、`purchases` 還沒接上，要到 P2 才算測過
+3. 升級：版本固定在 v0.40.3，沒升級過，這條其實還沒測到（當時最新版 v0.40.4 是修補版）
+4. 查詢：P1 的讀寫都用 REST API ＋ JS SDK 完成，沒寫 pb_hooks；最接近的是「只剩一筆不能刪」只能先查再刪，單人使用可以接受
+
+當初選 PocketBase 的主要理由（檔案上傳、on-demand 縮圖、備份）在 P1 都還沒用到，要到 P2 才會兌現或落空。
 
 **退場成本** —— 換回自建後端（Hono + Prisma + SQLite）需要：重寫 `src/repo/`、建後端專案、做一次性資料搬遷。
 

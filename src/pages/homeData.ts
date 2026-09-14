@@ -19,13 +19,18 @@ export type HomeCounts = { overdue: number; soon: number; ok: number };
 export type HomeData = {
   groups: HomeGroup[];
   counts: HomeCounts;
-  /** 沒有暫停的物品總數，用來分辨「還沒有任何物品」與「有物品但都被暫停」 */
-  activeCount: number;
+  /** 所有物品的數量（含暫停中），0 時顯示「還沒有任何物品」 */
+  totalCount: number;
+  /** 首頁最下方常駐的「N 項已暫停」（P2-2）：數量與所在位置，位置照設定的順序、不重複 */
+  paused: { count: number; locationNames: string[] };
 };
 
 export function buildHomeData(input: ItemEntriesInput): HomeData {
-  // 暫停的物品不出現在位置區塊（PRODUCT.md §3.2）。P2-2 會在首頁最下方常駐顯示「N 項已暫停」
-  const active = buildItemEntries(input).filter((entry) => !entry.item.paused);
+  const entries = buildItemEntries(input);
+  // 暫停中的物品不出現在位置區塊（PRODUCT.md §3.2），改由最下方的「N 項已暫停」常駐顯示。
+  // 用推導出的狀態判斷，不看 item.paused：到了預計恢復日的物品要回到位置區塊（見 due.ts 的 isPaused）
+  const active = entries.filter((entry) => entry.status !== "paused");
+  const pausedEntries = entries.filter((entry) => entry.status === "paused");
 
   const counts: HomeCounts = {
     overdue: active.filter((entry) => entry.status === "overdue").length,
@@ -54,6 +59,14 @@ export function buildHomeData(input: ItemEntriesInput): HomeData {
       ...groups.filter((group) => !group.hasOverdue),
     ],
     counts,
-    activeCount: active.length,
+    totalCount: entries.length,
+    paused: {
+      count: pausedEntries.length,
+      locationNames: input.locations
+        .filter((location) =>
+          pausedEntries.some((entry) => entry.location.id === location.id),
+        )
+        .map((location) => location.name),
+    },
   };
 }

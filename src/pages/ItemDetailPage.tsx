@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, Pause, Pencil, Play, Trash } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useParams } from "react-router";
@@ -9,6 +10,9 @@ import {
   STATUS_BADGE_CLASS,
   STATUS_LABEL,
 } from "../components/statusStyles.ts";
+import { useToast } from "../components/toastContext.ts";
+import { invalidateItemData, useUpdateItemPause } from "../queries.ts";
+import { updateItemPause } from "../repo/index.ts";
 import { brandModelText, displayName, isFilled } from "../shared/display.ts";
 import type { Log } from "../shared/types.ts";
 import DeleteItemSheet from "./DeleteItemSheet.tsx";
@@ -16,6 +20,7 @@ import DoneSheet from "./DoneSheet.tsx";
 import { buildItemDetailData, type HistoryRow } from "./itemDetailData.ts";
 import type { ItemEntry } from "./itemEntries.ts";
 import LogEditSheet from "./LogEditSheet.tsx";
+import PauseSheet from "./PauseSheet.tsx";
 import { useItemEntriesData } from "./useItemEntriesData.ts";
 
 // 版面照 docs/prototype/p0.html 的 renderDetail()。
@@ -34,10 +39,10 @@ function SummaryCard({ entry }: { entry: ItemEntry }) {
             color: status === "ok" ? "var(--ink)" : DAYS_TEXT_COLOR[status],
           }}
         >
-          {item.paused ? "—" : Math.abs(daysLeft)}
+          {status === "paused" ? "—" : Math.abs(daysLeft)}
         </div>
         <div className="mt-1.5 whitespace-nowrap font-mono text-[12px] text-ink-3">
-          {item.paused
+          {status === "paused"
             ? "已暫停"
             : daysLeft < 0
               ? "天前該換"
@@ -58,7 +63,8 @@ function SummaryCard({ entry }: { entry: ItemEntry }) {
           {latestLog.replacedOn !== null
             ? `上次更換 ${latestLog.replacedOn}`
             : "上次更換日期未記錄"}
-          {item.paused && (
+          {/* 用推導出的狀態判斷：到了預計恢復日就不再顯示（due.ts 的 isPaused） */}
+          {status === "paused" && (
             <>
               <br />
               預計 {item.pausedUntil} 恢復
@@ -210,12 +216,18 @@ function HistoryCard({
 function ItemActions({
   itemId,
   paused,
+  pauseBusy,
   onDone,
+  onPause,
   onDelete,
 }: {
   itemId: string;
   paused: boolean;
+  /** 恢復送出中：避免連按 */
+  pauseBusy: boolean;
   onDone: () => void;
+  /** 暫停中時直接恢復，沒暫停時打開暫停面板（照原型） */
+  onPause: () => void;
   onDelete: () => void;
 }) {
   // 編輯頁沿用詳情頁收到的來源分頁，下方分頁的亮起位置才不會跑掉
@@ -224,7 +236,6 @@ function ItemActions({
     "flex items-center justify-center gap-1.5 rounded-xl border border-line bg-surface py-3 text-[14px]";
 
   return (
-    // 還沒接上的按鈕先停用：暫停／恢復是 P2-1
     <div className="mt-4 grid grid-cols-3 gap-2">
       <button
         type="button"
@@ -233,7 +244,12 @@ function ItemActions({
       >
         換好了
       </button>
-      <button type="button" disabled className={secondary}>
+      <button
+        type="button"
+        onClick={onPause}
+        disabled={pauseBusy}
+        className={`${secondary} disabled:opacity-40`}
+      >
         {paused ? (
           <Play size={16} strokeWidth={1.75} aria-hidden />
         ) : (
@@ -279,6 +295,10 @@ function ItemDetailPage() {
   // 換好了面板是否開著。確認後留在詳情頁，更換歷史會直接多出一筆（P1-15 確認）
   const [doneOpen, setDoneOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [pauseOpen, setPauseOpen] = useState(false);
+  const resume = useUpdateItemPause();
+  const queryClient = useQueryClient();
+  const showToast = useToast();
   // 正在編輯的那筆更換紀錄；null 表示面板沒開
   const [editingLog, setEditingLog] = useState<Log | null>(null);
 
@@ -313,10 +333,53 @@ function ItemDetailPage() {
             <HistoryCard history={data.history} onEdit={setEditingLog} />
             <ItemActions
               itemId={itemId}
-              paused={data.entry.item.paused}
+              // 用推導出的狀態：日期已過、推導上已恢復的物品顯示「暫停」
+              paused={data.entry.status === "paused"}
+              pauseBusy={resume.isPending}
               onDone={() => setDoneOpen(true)}
+              onPause={() => {
+                const { entry } = data;
+                if (entry.status !== "paused" || !entry.item.paused) {
+                  setPauseOpen(true);
+                  return;
+                }
+                // 恢復不跳面板，直接恢復並可復原（照原型）
+                const previous = {
+                  paused: true as const,
+                  pausedUntil: entry.item.pausedUntil,
+                };
+                resume.mutate(
+                  {
+                    itemId: entry.item.id,
+                    pause: { paused: false, pausedUntil: null },
+                  },
+                  {
+                    onSuccess: () =>
+                      showToast({
+                        message: `${title} 已恢復`,
+                        onUndo: () => {
+                          void updateItemPause(entry.item.id, previous)
+                            .then(() => invalidateItemData(queryClient))
+                            .catch(() =>
+                              showToast({ message: "復原失敗，請稍後再試" }),
+                            );
+                        },
+                      }),
+                    onError: (resumeError) =>
+                      showToast({
+                        message: `恢復失敗：${resumeError.message}`,
+                      }),
+                  },
+                );
+              }}
               onDelete={() => setDeleteOpen(true)}
             />
+            {pauseOpen && (
+              <PauseSheet
+                entry={data.entry}
+                onClose={() => setPauseOpen(false)}
+              />
+            )}
             {doneOpen && (
               <DoneSheet
                 entry={data.entry}

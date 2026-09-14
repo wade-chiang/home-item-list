@@ -10,8 +10,12 @@ import {
   LABEL_CLASS,
 } from "../components/formStyles.ts";
 import { useToast } from "../components/toastContext.ts";
-import { invalidateItemData, useCreateLog } from "../queries.ts";
-import { deleteLog } from "../repo/index.ts";
+import {
+  invalidateItemData,
+  useCreateLog,
+  useCreateLogClearingPause,
+} from "../queries.ts";
+import { deleteLog, undoLogClearingPause } from "../repo/index.ts";
 import { getToday } from "../shared/date.ts";
 import { displayName } from "../shared/display.ts";
 import {
@@ -28,7 +32,8 @@ import {
 import type { ItemEntry } from "./itemEntries.ts";
 
 // 換好了確認面板，首頁與物品詳情頁共用。版面照 docs/prototype/p0.html 的 openDone()。
-// 這一步不做：拍耗材包裝（P2，見 TASKS.md P1-15）、這次有買新的（P2-7）、暫停中自動恢復（P2-1）。
+// 這一步不做：拍耗材包裝（P2，見 TASKS.md P1-15）、這次有買新的（P2-7）。
+// 暫停中的物品按換好了會同時取消暫停（PRODUCT.md §5.1，P2-1）。
 
 const DATE_OPTIONS: { value: DoneDate; label: string }[] = [
   { value: "today", label: "今天" },
@@ -50,7 +55,11 @@ function DoneSheet({ entry, onClose }: Props) {
     initialDoneForm(previousLatest, today),
   );
   const [errors, setErrors] = useState<DoneFormErrors>({});
-  const createLog = useCreateLog();
+  // 資料庫裡還標著暫停的物品（含日期已過、推導上已恢復的），寫入紀錄時一併清掉旗標
+  const clearsPause = item.paused;
+  const plainCreate = useCreateLog();
+  const pauseClearingCreate = useCreateLogClearingPause();
+  const createLog = clearsPause ? pauseClearingCreate : plainCreate;
   const queryClient = useQueryClient();
   const showToast = useToast();
   const id = useId();
@@ -87,9 +96,16 @@ function DoneSheet({ entry, onClose }: Props) {
             message: becomesLatest(previousLatest, created)
               ? `${name} 已記錄`
               : "已記錄 · 日期早於上次更換，到期日沒有變",
-            // 復原＝刪掉剛寫入的那筆。面板已經關閉，所以直接呼叫 repo 並自己讓資料重抓
+            // 復原＝刪掉剛寫入的那筆；原本是暫停中的話，暫停也一起還原。
+            // 面板已經關閉，所以直接呼叫 repo 並自己讓資料重抓
             onUndo: () => {
-              void deleteLog(created)
+              const undo = item.paused
+                ? undoLogClearingPause(created, {
+                    paused: true,
+                    pausedUntil: item.pausedUntil,
+                  })
+                : deleteLog(created);
+              void undo
                 .then(() => invalidateItemData(queryClient))
                 .catch(() => showToast({ message: "復原失敗，請稍後再試" }));
             },

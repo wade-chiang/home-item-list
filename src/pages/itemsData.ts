@@ -30,7 +30,7 @@ export function buildItemsData(input: ItemEntriesInput): ItemsData {
         .filter((entry) => entry.category.id === category.id)
         .toSorted(
           (a, b) =>
-            Number(a.item.paused) - Number(b.item.paused) ||
+            Number(a.status === "paused") - Number(b.status === "paused") ||
             a.daysLeft - b.daysLeft,
         ),
     }))
@@ -39,6 +39,7 @@ export function buildItemsData(input: ItemEntriesInput): ItemsData {
   return {
     groups,
     totalCount: entries.length,
-    pausedCount: entries.filter((entry) => entry.item.paused).length,
+    // 用推導出的狀態判斷：到了預計恢復日的物品不算暫停（due.ts 的 isPaused）
+    pausedCount: entries.filter((entry) => entry.status === "paused").length,
   };
 }

@@ -10,8 +10,7 @@ import type { Log } from "../shared/types.ts";
 import type { ItemEntry } from "./itemEntries.ts";
 
 // 刪除物品的確認面板，版面照 docs/prototype/p0.html 的 openDeleteItem()（PRODUCT.md §5.5）。
-// 這一步不顯示：照片張數與採購價格的說明（P2 才有這些資料）；
-// 「如果只是暫時不用，例如冬天的冷氣，可以改用『暫停』。」P2-1 做好暫停後再加回（P1-17 確認）。
+// 這一步不顯示：照片張數與採購價格的說明（P2 才有這些資料）。
 
 type Props = {
   entry: ItemEntry;
@@ -65,6 +64,9 @@ function DeleteItemSheet({ entry, logs, onClose }: Props) {
       </h3>
       <p className="mt-2 text-[13.5px] leading-relaxed text-ink-3">
         會一併刪除 <b className="text-ink-2">{logs.length} 筆更換紀錄</b>。
+      </p>
+      <p className="mt-2 text-[13px] leading-relaxed text-ink-3">
+        如果只是暫時不用，例如冬天的冷氣，可以改用「暫停」。
       </p>
       {deleteItem.error !== null && !deleteItem.isPending && (
         <p className="mt-3 rounded-xl bg-overdue-soft px-3.5 py-3 text-[13px] leading-relaxed text-overdue">

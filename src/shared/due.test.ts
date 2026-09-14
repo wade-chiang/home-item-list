@@ -3,6 +3,7 @@ import {
   calcDue,
   calcStatus,
   daysUntilDue,
+  isPaused,
   latestLog,
   sortLogsNewestFirst,
 } from "./due.ts";
@@ -178,6 +179,17 @@ describe("calcStatus", () => {
       pausedUntil: d("2026-12-01"),
     };
     expect(calcStatus(pausedItem, d("2026-01-01"), today)).toBe("paused");
+  });
+
+  it("到了預計恢復日當天就不再是暫停，照到期日計算（不順延）", () => {
+    const pausedItem: Item = {
+      ...activeItem,
+      paused: true,
+      pausedUntil: d("2026-09-10"),
+    };
+    expect(calcStatus(pausedItem, d("2026-01-01"), today)).toBe("overdue");
+    expect(isPaused(pausedItem, d("2026-09-09"))).toBe(true);
+    expect(isPaused(pausedItem, today)).toBe(false);
   });
 
   it("昨天到期是逾期", () => {
