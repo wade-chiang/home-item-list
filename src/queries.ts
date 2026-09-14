@@ -19,10 +19,19 @@ import {
   listLogs,
   type NewItem,
   type NewLog,
+  updateCategory,
+  updateDefaultLeadDays,
   updateItemWithLatestLog,
+  updateLocation,
   updateLog,
 } from "./repo/index.ts";
-import type { Item, ItemId, Log } from "./shared/types.ts";
+import type {
+  CategoryId,
+  Item,
+  ItemId,
+  LocationId,
+  Log,
+} from "./shared/types.ts";
 
 // 各頁共用的查詢：key 與 repo 函式在這裡綁在一起，頁面不用自己記 key。
 // 到期日是推導值，不能交給 PocketBase 排序，所以一律整批取回在前端計算（CLAUDE.md）。
@@ -74,6 +83,38 @@ export function useCreateCategory() {
     mutationFn: createCategory,
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: queryKeys.categories }),
+  });
+}
+
+/** 改名位置：成功後重抓位置 */
+export function useUpdateLocation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, name }: { id: LocationId; name: string }) =>
+      updateLocation(id, { name }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.locations }),
+  });
+}
+
+/** 改名類別：成功後重抓類別 */
+export function useUpdateCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, name }: { id: CategoryId; name: string }) =>
+      updateCategory(id, { name }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories }),
+  });
+}
+
+/** 新物品預設提前提醒：成功後重抓設定 */
+export function useUpdateDefaultLeadDays() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateDefaultLeadDays,
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings }),
   });
 }
 

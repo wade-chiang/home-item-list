@@ -70,6 +70,22 @@ export async function deleteLocation(id: LocationId): Promise<void> {
   await pb.collection("locations").delete(id);
 }
 
+/** 改名位置。icon 自選在 P2-11，這裡只改名稱 */
+export async function updateLocation(
+  id: LocationId,
+  changes: Pick<Location, "name">,
+): Promise<Location> {
+  return toLocation(await pb.collection("locations").update(id, changes));
+}
+
+/** 改名類別。規則同 updateLocation */
+export async function updateCategory(
+  id: CategoryId,
+  changes: Pick<Category, "name">,
+): Promise<Category> {
+  return toCategory(await pb.collection("categories").update(id, changes));
+}
+
 /** 刪除類別。規則同 deleteLocation */
 export async function deleteCategory(id: CategoryId): Promise<void> {
   await pb.collection("categories").delete(id);
@@ -99,6 +115,17 @@ export async function listLogsByItem(itemId: ItemId): Promise<Log[]> {
 
 export async function getSettings(): Promise<Settings> {
   return toSettings(await pb.collection("settings").getFullList());
+}
+
+/**
+ * 新物品預設提前提醒。settings 是 key-value 列，這筆由 P1-5 的 migration 建立。
+ * 只影響之後新增的物品，已建立的物品不變（PRODUCT.md §4.6）
+ */
+export async function updateDefaultLeadDays(days: number): Promise<void> {
+  const row = await pb
+    .collection("settings")
+    .getFirstListItem(pb.filter("key = {:key}", { key: "defaultLeadDays" }));
+  await pb.collection("settings").update(row.id, { value: String(days) });
 }
 
 /**
