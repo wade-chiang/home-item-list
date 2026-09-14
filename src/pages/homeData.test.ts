@@ -211,3 +211,39 @@ describe("buildHomeData", () => {
     ).toThrow(/找不到位置/);
   });
 });
+
+describe("首頁快速篩選", () => {
+  const items = [
+    item("overdueA", "loc1", "cat1"),
+    item("soonB", "loc2", "cat1"),
+    item("okA", "loc1", "cat1"),
+  ];
+  const logs = [
+    // 到期日 = 更換日期 + 週期；今天是 2026-09-10、提前提醒 7 天
+    log("l1", "overdueA", "2026-08-01", 30),
+    log("l2", "soonB", "2026-09-01", 12),
+    log("l3", "okA", "2026-09-10", 30),
+  ];
+  const input = { locations, categories, items, logs, today };
+
+  it("只顯示符合的物品，沒有符合物品的位置隱藏，數量維持總數", () => {
+    const home = buildHomeData(input, "soon");
+    expect(home.filter).toBe("soon");
+    expect(home.groups.map((group) => group.location.name)).toEqual(["客廳"]);
+    expect(home.counts).toEqual({ overdue: 1, soon: 1, ok: 1 });
+  });
+
+  it("「有逾期」與置頂依篩選後的物品判斷", () => {
+    const home = buildHomeData(input, "ok");
+    expect(home.groups.map((group) => group.hasOverdue)).toEqual([false]);
+  });
+
+  it("篩選的狀態數量是 0 時自動取消", () => {
+    const home = buildHomeData(
+      { ...input, items: [items[2]], logs: [logs[2]] },
+      "overdue",
+    );
+    expect(home.filter).toBeNull();
+    expect(home.groups).toHaveLength(1);
+  });
+});

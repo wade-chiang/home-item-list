@@ -69,29 +69,52 @@ export async function createCategory(place: NewPlace): Promise<Category> {
 }
 
 /**
- * 刪除位置。還有物品屬於它時 PocketBase 會拒絕，回 400
+ * 刪除位置（P2-11；P1-15a 起也用在新增後的復原）。還有物品屬於它時 PocketBase 會拒絕，回 400
  * 「Failed to delete record. Make sure that the record is not part of a required relation reference.」
  * （relation 必填且不連帶刪除，P1-5；2026-09-13 實測）。
- * P1-15a 只用在新增後的「復原」；P2-11 的刪除位置也用這個函式。
  */
 export async function deleteLocation(id: LocationId): Promise<void> {
   await pb.collection("locations").delete(id);
 }
 
-/** 改名位置。icon 自選在 P2-11，這裡只改名稱 */
+/** 改名與換 icon（P1-19、P2-11）。復原時傳回原本的名稱與 icon */
 export async function updateLocation(
   id: LocationId,
-  changes: Pick<Location, "name">,
+  changes: Pick<Location, "name" | "icon">,
 ): Promise<Location> {
   return toLocation(await pb.collection("locations").update(id, changes));
 }
 
-/** 改名類別。規則同 updateLocation */
+/** 改名與換 icon。規則同 updateLocation */
 export async function updateCategory(
   id: CategoryId,
-  changes: Pick<Category, "name">,
+  changes: Pick<Category, "name" | "icon">,
 ): Promise<Category> {
   return toCategory(await pb.collection("categories").update(id, changes));
+}
+
+/** 刪除位置後的「復原」：用原本的 id、名稱、icon、排序建回來（P2-11） */
+export async function restoreLocation(location: Location): Promise<void> {
+  await pb.collection("locations").create(location);
+}
+
+/** 刪除類別後的「復原」，規則同 restoreLocation */
+export async function restoreCategory(category: Category): Promise<void> {
+  await pb.collection("categories").create(category);
+}
+
+/**
+ * 位置排序（P2-11）：照傳入的順序把所有位置的 sortOrder 重寫成 0、1、2…，放在同一個 batch。
+ * 首頁的位置區塊照這個順序排（有逾期的暫時置頂）
+ */
+export async function reorderLocations(
+  orderedIds: readonly LocationId[],
+): Promise<void> {
+  const batch = pb.createBatch();
+  orderedIds.forEach((id, sortOrder) => {
+    batch.collection("locations").update(id, { sortOrder });
+  });
+  await batch.send();
 }
 
 /** 刪除類別。規則同 deleteLocation */
@@ -511,6 +534,17 @@ export async function deleteLog(
   await batch.send();
   // 回傳實際刪掉的採購紀錄，理由同 deleteItem
   return purchaseIds;
+}
+
+/**
+ * 只改一筆更換紀錄的週期：實際間隔回饋的「把目前週期改成 N 天」（PRODUCT.md §3.5），寫入最近一筆。
+ * 復原時傳回原本的週期
+ */
+export async function updateLogCycle(
+  logId: LogId,
+  cycleDays: number,
+): Promise<Log> {
+  return toLog(await pb.collection("logs").update(logId, { cycleDays }));
 }
 
 /** 更換紀錄存檔後，採購紀錄變成什麼樣子：復原時交給 revertLogWithPurchase 還原 */

@@ -64,11 +64,11 @@ export function brandModelHint(
   return brandModelText(latest) === null ? "lastEmpty" : "same";
 }
 
-// 「與上次不同」後面原型還有「，歷史會標示『型號變更』」，那個標示在 P2-9 才做，到時再補上（P1-15 確認）
+// 「，歷史會標示『型號變更』」照原型，P2-9 做好更換歷史的標示後加回（P1-15 確認）
 export const BRAND_MODEL_HINT_TEXT: Record<BrandModelHint, string> = {
   same: "沿用上次",
   lastEmpty: "上次沒填",
-  changed: "與上次不同",
+  changed: "與上次不同，歷史會標示「型號變更」",
 };
 
 /** 週期是否跟最近一筆相同。還沒填好（空白或不合法）時算不同 */

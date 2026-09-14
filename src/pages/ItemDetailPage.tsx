@@ -1,5 +1,13 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Camera, ChevronRight, Pause, Pencil, Play, Trash } from "lucide-react";
+import {
+  ArrowLeftRight,
+  Camera,
+  ChevronRight,
+  Pause,
+  Pencil,
+  Play,
+  Trash,
+} from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useParams } from "react-router";
 import ItemNotFound from "../components/ItemNotFound.tsx";
@@ -15,8 +23,9 @@ import {
   invalidateItemData,
   usePurchases,
   useUpdateItemPause,
+  useUpdateLogCycle,
 } from "../queries.ts";
-import { updateItemPause } from "../repo/index.ts";
+import { updateItemPause, updateLogCycle } from "../repo/index.ts";
 import {
   brandModelText,
   displayName,
@@ -26,7 +35,11 @@ import {
 import type { Log, Purchase } from "../shared/types.ts";
 import DeleteItemSheet from "./DeleteItemSheet.tsx";
 import DoneSheet from "./DoneSheet.tsx";
-import { buildItemDetailData, type HistoryRow } from "./itemDetailData.ts";
+import {
+  buildItemDetailData,
+  type HistoryRow,
+  type IntervalFeedback,
+} from "./itemDetailData.ts";
 import type { ItemEntry } from "./itemEntries.ts";
 import LogEditSheet from "./LogEditSheet.tsx";
 import PauseSheet from "./PauseSheet.tsx";
@@ -34,7 +47,6 @@ import PhotoField from "./PhotoField.tsx";
 import { useItemEntriesData } from "./useItemEntriesData.ts";
 
 // 版面照 docs/prototype/p0.html 的 renderDetail()。
-// 這一步不做（P1-13 確認）：實際間隔回饋與型號／週期變更標示（P2-9）。
 // 還不能用的操作照原型顯示但停用，各 task 做到時再接上。
 
 function SummaryCard({ entry }: { entry: ItemEntry }) {
@@ -139,6 +151,67 @@ function InfoCard({ entry }: { entry: ItemEntry }) {
   );
 }
 
+/**
+ * 實際間隔回饋卡片（PRODUCT.md §3.5），版面照原型。只提示，按了才改最近一筆的週期
+ * （CLAUDE.md「下次到期用這次填的週期」：不自動學習實際間隔）
+ */
+function IntervalFeedbackCard({
+  feedback,
+  latestLog,
+}: {
+  feedback: IntervalFeedback;
+  latestLog: Log;
+}) {
+  const update = useUpdateLogCycle();
+  const queryClient = useQueryClient();
+  const showToast = useToast();
+
+  const onAdjust = () => {
+    const previous = latestLog.cycleDays;
+    update.mutate(
+      { logId: latestLog.id, cycleDays: feedback.suggestedCycleDays },
+      {
+        onSuccess: () =>
+          showToast({
+            message: `目前週期改成 ${feedback.suggestedCycleDays} 天`,
+            onUndo: () => {
+              void updateLogCycle(latestLog.id, previous)
+                .then(() => invalidateItemData(queryClient))
+                .catch(() => showToast({ message: "復原失敗，請稍後再試" }));
+            },
+          }),
+        onError: (error) =>
+          showToast({ message: `修改週期失敗：${error.message}` }),
+      },
+    );
+  };
+
+  return (
+    <div className="mt-3 rounded-2xl bg-accent-soft px-4 py-3.5">
+      <p className="text-[14px] leading-relaxed">
+        目前週期 <b>{feedback.currentCycleDays} 天</b>，實際平均{" "}
+        <b>{feedback.averageDays} 天</b>換一次。
+      </p>
+      <p className="mt-0.5 font-mono text-[12px] text-ink-2">
+        近 {feedback.gaps.length} 次間隔：{feedback.gaps.join(" / ")} 天
+      </p>
+      <button
+        type="button"
+        onClick={onAdjust}
+        disabled={update.isPending}
+        className="mt-3 rounded-lg border border-accent bg-surface px-3 py-2 text-[13.5px] font-medium text-accent disabled:opacity-40"
+      >
+        {update.isPending
+          ? "修改中…"
+          : `把目前週期改成 ${feedback.suggestedCycleDays} 天`}
+      </button>
+      <p className="mt-2 text-[12px] text-ink-3">
+        會同時更新這一次的到期日，過去的紀錄不變。
+      </p>
+    </div>
+  );
+}
+
 /** 物品照片卡片，版面照原型詳情頁的「物品照片」 */
 function ItemPhotosCard({ item }: { item: ItemEntry["item"] }) {
   return (
@@ -173,7 +246,7 @@ function HistoryItem({
   purchase: Purchase | null;
   onEdit: (log: Log) => void;
 }) {
-  const { log, gapDays, isOldest } = row;
+  const { log, gapDays, isOldest, modelChanged, previousCycleDays } = row;
   const model = brandModelText(log);
 
   return (
@@ -203,6 +276,18 @@ function HistoryItem({
             ) : (
               <span className="whitespace-nowrap text-ink-3">
                 {log.cycleDays} 天
+              </span>
+            )}
+            {/* 型號變更與週期變更標示（PRODUCT.md §3.4）。原型的 rounded 在 Tailwind v4 是 rounded-sm */}
+            {modelChanged && (
+              <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-sm bg-soon-soft px-1.5 py-0.5 text-[11px] text-soon">
+                <ArrowLeftRight size={12} strokeWidth={2} aria-hidden />
+                型號變更
+              </span>
+            )}
+            {previousCycleDays !== null && (
+              <span className="whitespace-nowrap rounded-sm bg-soon-soft px-1.5 py-0.5 text-[11px] text-soon">
+                週期 {previousCycleDays} → {log.cycleDays}
               </span>
             )}
           </div>
@@ -405,6 +490,12 @@ function ItemDetailPage() {
           <>
             <SummaryCard entry={data.entry} />
             <InfoCard entry={data.entry} />
+            {data.feedback !== null && (
+              <IntervalFeedbackCard
+                feedback={data.feedback}
+                latestLog={data.entry.latestLog}
+              />
+            )}
             <ItemPhotosCard item={data.entry.item} />
             <HistoryCard
               history={data.history}

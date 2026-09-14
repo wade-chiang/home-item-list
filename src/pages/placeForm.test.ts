@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextSortOrder, validatePlaceName } from "./placeForm.ts";
+import { moveItem, nextSortOrder, validatePlaceName } from "./placeForm.ts";
 
 describe("nextSortOrder", () => {
   it("沒有任何項目時從 0 開始", () => {
@@ -39,5 +39,19 @@ describe("validatePlaceName", () => {
       ok: false,
       error: "已經有「主臥」了",
     });
+  });
+});
+
+describe("moveItem", () => {
+  it("往後搬與往前搬", () => {
+    expect(moveItem(["a", "b", "c", "d"], 0, 2)).toEqual(["b", "c", "a", "d"]);
+    expect(moveItem(["a", "b", "c", "d"], 3, 1)).toEqual(["a", "d", "b", "c"]);
+  });
+
+  it("不改動傳入的陣列；位置超出範圍時不搬", () => {
+    const items = ["a", "b"];
+    expect(moveItem(items, 0, 1)).toEqual(["b", "a"]);
+    expect(items).toEqual(["a", "b"]);
+    expect(moveItem(items, 5, 0)).toEqual(["a", "b"]);
   });
 });

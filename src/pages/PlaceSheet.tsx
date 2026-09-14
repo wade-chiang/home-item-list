@@ -4,6 +4,7 @@ import { type FormEvent, useId, useState } from "react";
 import BottomSheet from "../components/BottomSheet.tsx";
 import { INPUT_CLASS, LABEL_CLASS } from "../components/formStyles.ts";
 import Icon from "../components/Icon.tsx";
+import { CATEGORY_ICONS, LOCATION_ICONS } from "../components/placeIcons.ts";
 import { useToast } from "../components/toastContext.ts";
 import { queryKeys } from "../queryKeys.ts";
 import {
@@ -15,6 +16,8 @@ import {
 import {
   deleteCategory,
   deleteLocation,
+  restoreCategory,
+  restoreLocation,
   updateCategory,
   updateLocation,
 } from "../repo/index.ts";
@@ -27,13 +30,18 @@ import {
   validatePlaceName,
 } from "./placeForm.ts";
 
-// 新增與改名位置／類別的面板，版面照 docs/prototype/p0.html 的 openEditPlace()。
-// 新增在 P1-15a、改名在 P1-19。這一步不做：icon 選擇與刪除（P2-11）。
-// icon 預覽方塊照原型顯示（P1-15a 確認），P2-11 加上選擇後沿用。
+// 新增與編輯位置／類別的面板，版面照 docs/prototype/p0.html 的 openEditPlace()。
+// 新增在 P1-15a、改名在 P1-19、icon 自選與刪除在 P2-11。
 
 const PLACEHOLDER: Record<PlaceKind, string> = {
   location: "例如 主臥",
   category: "例如 冷氣濾網",
+};
+
+/** icon 精選清單：位置與類別各約 30 個（PRODUCT.md §4.6） */
+const ICON_CHOICES: Record<PlaceKind, readonly string[]> = {
+  location: LOCATION_ICONS,
+  category: CATEGORY_ICONS,
 };
 
 type Place = Location | Category;
@@ -42,32 +50,38 @@ type Props = {
   kind: PlaceKind;
   /** 目前所有的位置或類別，用來檢查重複名稱與決定排序 */
   existing: readonly Place[];
-  /** 要改名的那一筆；null 表示新增 */
+  /** 要編輯的那一筆；null 表示新增 */
   target: Place | null;
+  /** 屬於這個位置或類別的物品數：還有物品時不能刪除（PRODUCT.md §4.6） */
+  itemCount: number;
   onClose: () => void;
 };
 
-function PlaceSheet({ kind, existing, target, onClose }: Props) {
+function PlaceSheet({ kind, existing, target, itemCount, onClose }: Props) {
   const word = PLACE_WORD[kind];
-  const icon = target?.icon ?? DEFAULT_PLACE_ICON[kind];
   const [name, setName] = useState(target?.name ?? "");
+  // 新增時預設 icon 沿用 P1-15a 的 house／package，兩者都在精選清單裡
+  const [icon, setIcon] = useState(target?.icon ?? DEFAULT_PLACE_ICON[kind]);
   const [error, setError] = useState<string | null>(null);
-  // hook 不能依條件呼叫，所以四個都建立，再依種類與新增／改名挑一個用
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  // hook 不能依條件呼叫，所以四個都建立，再依種類與新增／編輯挑一個用
   const createLocation = useCreateLocation();
   const createCategory = useCreateCategory();
-  const renameLocation = useUpdateLocation();
-  const renameCategory = useUpdateCategory();
+  const updateLocationMutation = useUpdateLocation();
+  const updateCategoryMutation = useUpdateCategory();
   const mutations = [
     createLocation,
     createCategory,
-    renameLocation,
-    renameCategory,
+    updateLocationMutation,
+    updateCategoryMutation,
   ];
   const queryClient = useQueryClient();
   const showToast = useToast();
   const id = useId();
 
-  const isPending = mutations.some((mutation) => mutation.isPending);
+  const isPending =
+    deleting || mutations.some((mutation) => mutation.isPending);
   const submitError =
     mutations.find((mutation) => mutation.error !== null)?.error ?? null;
 
@@ -86,7 +100,7 @@ function PlaceSheet({ kind, existing, target, onClose }: Props) {
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // 改名時跟自己同名不算重複
+    // 編輯時跟自己同名不算重複
     const others = existing.filter((place) => place.id !== target?.id);
     const result = validatePlaceName(name, kind, others);
     if (!result.ok) {
@@ -127,20 +141,16 @@ function PlaceSheet({ kind, existing, target, onClose }: Props) {
       return;
     }
 
-    const previousName = target.name;
-    const onSuccess = (renamed: Place) => {
+    const previous = { name: target.name, icon: target.icon };
+    const onSuccess = (updated: Place) => {
       showToast({
-        message: `已更新${word}「${renamed.name}」`,
-        // 復原＝改回原本的名稱。面板已經關閉，所以直接呼叫 repo 並自己讓資料重抓
+        message: `已更新${word}「${updated.name}」`,
+        // 復原＝改回原本的名稱與 icon。面板已經關閉，所以直接呼叫 repo 並自己讓資料重抓
         onUndo: () => {
           const restore =
             kind === "location"
-              ? updateLocation(target.id as Location["id"], {
-                  name: previousName,
-                })
-              : updateCategory(target.id as Category["id"], {
-                  name: previousName,
-                });
+              ? updateLocation(target.id as Location["id"], previous)
+              : updateCategory(target.id as Category["id"], previous);
           void restore
             .then(refetchPlaces)
             .catch(() => showToast({ message: "復原失敗，請稍後再試" }));
@@ -149,16 +159,55 @@ function PlaceSheet({ kind, existing, target, onClose }: Props) {
       onClose();
     };
     if (kind === "location") {
-      renameLocation.mutate(
-        { id: target.id as Location["id"], name: result.name },
+      updateLocationMutation.mutate(
+        { id: target.id as Location["id"], name: result.name, icon },
         { onSuccess },
       );
     } else {
-      renameCategory.mutate(
-        { id: target.id as Category["id"], name: result.name },
+      updateCategoryMutation.mutate(
+        { id: target.id as Category["id"], name: result.name, icon },
         { onSuccess },
       );
     }
+  };
+
+  /** 刪除不跳確認，照原型：用提示條說明並可復原 */
+  const onDelete = async () => {
+    if (target === null) {
+      return;
+    }
+    setDeleteError(null);
+    setDeleting(true);
+    try {
+      // 還有物品屬於它時 PocketBase 會拒絕（P1-15a 實測），畫面上的物品數是舊的時就會走到這裡
+      if (kind === "location") {
+        await deleteLocation(target.id as Location["id"]);
+      } else {
+        await deleteCategory(target.id as Category["id"]);
+      }
+    } catch (caught) {
+      setDeleteError(
+        `刪除失敗，可能還有物品在這個${word}：${caught instanceof Error ? caught.message : String(caught)}`,
+      );
+      return;
+    } finally {
+      setDeleting(false);
+    }
+    await refetchPlaces();
+    showToast({
+      message: `已刪除${word}「${target.name}」`,
+      // 復原＝用原本的 id、名稱、icon、排序建回來
+      onUndo: () => {
+        const restore =
+          kind === "location"
+            ? restoreLocation(target as Location)
+            : restoreCategory(target as Category);
+        void restore
+          .then(refetchPlaces)
+          .catch(() => showToast({ message: "復原失敗，請稍後再試" }));
+      },
+    });
+    onClose();
   };
 
   const isNew = target === null;
@@ -202,6 +251,22 @@ function PlaceSheet({ kind, existing, target, onClose }: Props) {
           <p className="mt-1.5 text-[12.5px] text-overdue">{error}</p>
         )}
 
+        <p className={`${LABEL_CLASS} mt-4`}>icon</p>
+        <div className="grid grid-cols-6 gap-1.5">
+          {ICON_CHOICES[kind].map((choice) => (
+            <button
+              key={choice}
+              type="button"
+              aria-label={choice}
+              aria-pressed={icon === choice}
+              onClick={() => setIcon(choice)}
+              className={`grid aspect-square place-items-center rounded-xl border ${icon === choice ? "border-accent bg-accent-soft text-accent" : "border-line-2 text-ink-2"}`}
+            >
+              <Icon name={choice} size={22} />
+            </button>
+          ))}
+        </div>
+
         {submitError !== null && !isPending && (
           <p className="mt-4 rounded-xl bg-overdue-soft px-3.5 py-3 text-[13px] leading-relaxed text-overdue">
             {isNew ? "新增" : "儲存"}失敗：{submitError.message}
@@ -212,7 +277,7 @@ function PlaceSheet({ kind, existing, target, onClose }: Props) {
           disabled={isPending}
           className="mt-5 w-full rounded-xl bg-accent py-3.5 text-[15.5px] font-semibold text-accent-ink disabled:opacity-40"
         >
-          {isPending
+          {isPending && !deleting
             ? isNew
               ? "新增中…"
               : "儲存中…"
@@ -220,6 +285,28 @@ function PlaceSheet({ kind, existing, target, onClose }: Props) {
               ? "新增"
               : "儲存"}
         </button>
+        {!isNew && (
+          <>
+            <button
+              type="button"
+              onClick={() => void onDelete()}
+              disabled={itemCount > 0 || isPending}
+              className="mt-2 w-full rounded-xl py-3 text-[14px] text-overdue disabled:text-ink-3"
+            >
+              {deleting ? "刪除中…" : `刪除${word}`}
+            </button>
+            {itemCount > 0 && (
+              <p className="text-center text-[12px] leading-relaxed text-ink-3">
+                還有 {itemCount} 個物品在這個{word}，要先移到別的{word}才能刪除
+              </p>
+            )}
+            {deleteError !== null && (
+              <p className="mt-1.5 text-center text-[12.5px] leading-relaxed text-overdue">
+                {deleteError}
+              </p>
+            )}
+          </>
+        )}
       </form>
     </BottomSheet>
   );

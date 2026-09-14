@@ -28,6 +28,7 @@ import {
   updateItemPause,
   updateItemWithLatestLog,
   updateLocation,
+  updateLogCycle,
 } from "./repo/index.ts";
 import type {
   CategoryId,
@@ -36,6 +37,7 @@ import type {
   ItemPause,
   LocationId,
   Log,
+  LogId,
   Purchase,
 } from "./shared/types.ts";
 
@@ -104,8 +106,15 @@ export function useCreateCategory() {
 export function useUpdateLocation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, name }: { id: LocationId; name: string }) =>
-      updateLocation(id, { name }),
+    mutationFn: ({
+      id,
+      name,
+      icon,
+    }: {
+      id: LocationId;
+      name: string;
+      icon: string;
+    }) => updateLocation(id, { name, icon }),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: queryKeys.locations }),
   });
@@ -115,8 +124,15 @@ export function useUpdateLocation() {
 export function useUpdateCategory() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, name }: { id: CategoryId; name: string }) =>
-      updateCategory(id, { name }),
+    mutationFn: ({
+      id,
+      name,
+      icon,
+    }: {
+      id: CategoryId;
+      name: string;
+      icon: string;
+    }) => updateCategory(id, { name, icon }),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: queryKeys.categories }),
   });
@@ -204,6 +220,16 @@ export function useDeleteItem() {
       /** 用來一起刪除它們的採購紀錄（P2-6） */
       logs: readonly Pick<Log, "id" | "purchaseId">[];
     }) => deleteItem(id, logs),
+  });
+}
+
+/** 實際間隔回饋：把最近一筆更換紀錄的週期改成建議值 */
+export function useUpdateLogCycle() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ logId, cycleDays }: { logId: LogId; cycleDays: number }) =>
+      updateLogCycle(logId, cycleDays),
+    onSuccess: () => invalidateItemData(queryClient),
   });
 }
 

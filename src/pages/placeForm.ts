@@ -45,3 +45,18 @@ export function validatePlaceName(
   }
   return { ok: true, name };
 }
+
+/** 把陣列裡第 from 個搬到第 to 個，回傳新陣列（拖曳排序放開後用，P2-11） */
+export function moveItem<T>(
+  items: readonly T[],
+  from: number,
+  to: number,
+): T[] {
+  const next = [...items];
+  const [moved] = next.splice(from, 1);
+  if (moved === undefined) {
+    return next;
+  }
+  next.splice(to, 0, moved);
+  return next;
+}

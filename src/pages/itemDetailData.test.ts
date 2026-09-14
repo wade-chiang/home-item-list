@@ -10,7 +10,11 @@ import type {
   Log,
   LogId,
 } from "../shared/types.ts";
-import { buildItemDetailData } from "./itemDetailData.ts";
+import {
+  buildIntervalFeedback,
+  buildItemDetailData,
+  suggestCycleDays,
+} from "./itemDetailData.ts";
 
 const d = (value: string) => value as IsoDate;
 const today = d("2026-09-10");
@@ -159,5 +163,102 @@ describe("buildItemDetailData", () => {
     expect(data.history).toHaveLength(1);
     expect(data.history[0].isOldest).toBe(true);
     expect(data.history[0].gapDays).toBeNull();
+  });
+});
+
+describe("型號變更與週期變更標示", () => {
+  function detail(logs: Log[]) {
+    const data = buildItemDetailData(
+      { locations, categories, items: [item("a")], logs, today },
+      "a",
+    );
+    if (!data.found) {
+      throw new Error("應該找得到物品");
+    }
+    return data.history;
+  }
+
+  it("品牌型號只差大小寫或全形時不算變更；從有填換成沒填算變更", () => {
+    const history = detail([
+      { ...logOn("old", "a", "2026-01-01"), brand: "3M", model: "9808" },
+      { ...logOn("mid", "a", "2026-04-01"), brand: "３ｍ", model: " 9808" },
+      { ...logOn("new", "a", "2026-07-01"), brand: null, model: null },
+    ]);
+    expect(history.map((row) => [row.log.id, row.modelChanged])).toEqual([
+      ["new", true],
+      ["mid", false],
+      ["old", false],
+    ]);
+  });
+
+  it("週期不同時帶出前一筆的週期", () => {
+    const history = detail([
+      logOn("old", "a", "2026-01-01"),
+      { ...logOn("new", "a", "2026-04-01"), cycleDays: 60 },
+    ]);
+    expect(history.map((row) => row.previousCycleDays)).toEqual([90, null]);
+  });
+});
+
+describe("buildIntervalFeedback", () => {
+  const at = (id: string, date: string, cycleDays = 90) => ({
+    ...logOn(id, "a", date),
+    cycleDays,
+  });
+
+  it("只有一個間隔時不顯示", () => {
+    expect(
+      buildIntervalFeedback([at("b", "2026-05-01"), at("a", "2026-01-01")]),
+    ).toBeNull();
+  });
+
+  it("平均跟目前週期差不到 10 天時不顯示", () => {
+    // 間隔 95、95 天，週期 90
+    expect(
+      buildIntervalFeedback([
+        at("c", "2026-07-09"),
+        at("b", "2026-04-05"),
+        at("a", "2025-12-31"),
+      ]),
+    ).toBeNull();
+  });
+
+  it("只取最近 3 次間隔，建議值四捨五入到 10 天", () => {
+    const feedback = buildIntervalFeedback([
+      at("e", "2026-09-01"),
+      at("d", "2026-05-12"), // 112
+      at("c", "2026-01-02"), // 130
+      at("b", "2025-09-12"), // 112
+      at("a", "2025-01-01"), // 很久以前，不算
+    ]);
+    expect(feedback).toEqual({
+      currentCycleDays: 90,
+      averageDays: 118,
+      gaps: [112, 130, 112],
+      suggestedCycleDays: 120,
+    });
+  });
+
+  it("日期未記錄的紀錄跳過", () => {
+    const unknown = logUnknownDate("u", "a", "2026-12-01");
+    const feedback = buildIntervalFeedback([
+      at("c", "2026-09-01", 30),
+      at("b", "2026-08-01", 30),
+      at("a", "2026-07-01", 30),
+      unknown,
+    ]);
+    expect(feedback).toBeNull();
+  });
+});
+
+describe("suggestCycleDays", () => {
+  it("30 天以上四捨五入到 10 天", () => {
+    expect(suggestCycleDays(118)).toBe(120);
+    expect(suggestCycleDays(30)).toBe(30);
+  });
+
+  it("30 天以下用平均本身，不小於 1 天", () => {
+    expect(suggestCycleDays(7)).toBe(7);
+    expect(suggestCycleDays(0)).toBe(1);
   });
 });

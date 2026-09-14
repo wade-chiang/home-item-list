@@ -9,12 +9,16 @@ import { DAYS_TEXT_COLOR, STRIPE_COLOR } from "../components/statusStyles.ts";
 import type { NavState } from "../navigation.ts";
 import { brandModelLine, daysText, isFilled } from "../shared/display.ts";
 import DoneSheet from "./DoneSheet.tsx";
-import { buildHomeData, type HomeData, type HomeGroup } from "./homeData.ts";
+import {
+  buildHomeData,
+  type HomeData,
+  type HomeFilter,
+  type HomeGroup,
+} from "./homeData.ts";
 import type { ItemEntry } from "./itemEntries.ts";
 import { useItemEntriesData } from "./useItemEntriesData.ts";
 
 // 版面照 docs/prototype/p0.html 的 renderHome()。
-// 快速篩選（點數量方塊）是 P2-10，所以數量方塊這一步不是按鈕。
 
 const FROM_HOME: NavState = { from: "home" };
 
@@ -28,22 +32,42 @@ const TILES = [
   { status: "ok", label: "正常", className: "bg-line-2 text-ink-2" },
 ] as const;
 
-function StatTiles({ counts }: { counts: HomeData["counts"] }) {
+/**
+ * 數量方塊，點一下快速篩選、再點一下取消（P2-10，PRODUCT.md §4.1，照原型的 statTile()）。
+ * 一次選一個；被選的加框線、其他變淡；數量為 0 的方塊不能點
+ */
+function StatTiles({
+  counts,
+  filter,
+  onFilter,
+}: {
+  counts: HomeData["counts"];
+  filter: HomeFilter | null;
+  onFilter: (filter: HomeFilter | null) => void;
+}) {
   return (
     <div className="grid grid-cols-3 gap-2 pt-4">
-      {TILES.map((tile) => (
-        <div
-          key={tile.status}
-          className={`rounded-xl px-3 py-2.5 text-left ${tile.className}`}
-        >
-          <div className="font-mono text-[22px] font-medium leading-none tabular-nums">
-            {counts[tile.status]}
-          </div>
-          <div className="mt-1.5 whitespace-nowrap text-[12px]">
-            {tile.label}
-          </div>
-        </div>
-      ))}
+      {TILES.map((tile) => {
+        const active = filter === tile.status;
+        const dim = filter !== null && !active;
+        return (
+          <button
+            key={tile.status}
+            type="button"
+            disabled={counts[tile.status] === 0}
+            aria-pressed={active}
+            onClick={() => onFilter(active ? null : tile.status)}
+            className={`rounded-xl px-3 py-2.5 text-left transition-opacity ${tile.className} ${active ? "ring-2 ring-inset ring-current" : ""} ${dim ? "opacity-40" : ""} disabled:cursor-default`}
+          >
+            <div className="font-mono text-[22px] font-medium leading-none tabular-nums">
+              {counts[tile.status]}
+            </div>
+            <div className="mt-1.5 whitespace-nowrap text-[12px]">
+              {tile.label}
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -192,7 +216,19 @@ function HomeSkeleton() {
 }
 
 function HomePage() {
-  const { data: home, error, retry } = useItemEntriesData(buildHomeData);
+  // 篩選只存在這個畫面的 state：離開首頁（換分頁、進詳情頁）時畫面卸載就清除，
+  // 不存 localStorage、不放網址（CLAUDE.md「首頁篩選不要記住」）
+  const [filter, setFilter] = useState<HomeFilter | null>(null);
+  const {
+    data: home,
+    error,
+    retry,
+  } = useItemEntriesData((input) => buildHomeData(input, filter));
+  // 篩選中的狀態數量歸零時自動取消：buildHomeData 已改用 null 顯示，這裡把 state 也清掉，
+  // 之後同一個狀態又有物品時才不會自己跳回篩選。render 中依資料調整 state 是 React 允許的寫法
+  if (home !== null && filter !== null && home.filter === null) {
+    setFilter(null);
+  }
   // 換好了面板開著時是哪個物品；null 表示沒開
   const [doneEntry, setDoneEntry] = useState<ItemEntry | null>(null);
 
@@ -208,7 +244,11 @@ function HomePage() {
           <EmptyItemsState />
         ) : (
           <>
-            <StatTiles counts={home.counts} />
+            <StatTiles
+              counts={home.counts}
+              filter={home.filter}
+              onFilter={setFilter}
+            />
             {home.groups.map((group) => (
               <GroupSection
                 key={group.location.id}

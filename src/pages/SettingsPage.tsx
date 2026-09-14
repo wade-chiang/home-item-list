@@ -24,21 +24,25 @@ import {
 } from "../queries.ts";
 import type { Category, Item, Location } from "../shared/types.ts";
 import DefaultLeadSheet from "./DefaultLeadSheet.tsx";
+import LocationReorderList from "./LocationReorderList.tsx";
 import { PLACE_WORD, type PlaceKind } from "./placeForm.ts";
 import PlaceSheet from "./PlaceSheet.tsx";
 
 // 版面照 docs/prototype/p0.html 的 renderSettings()。
-// 還沒做的：物品 icon 顯示開關（P2-12）；自選 icon、刪除、調整順序（P2-11）；資料（P2-13）。
-// 還沒做的功能不顯示，跟 P1-15a 隱藏「調整順序」的做法一致（P1-19 確認）。
+// 還沒做的：物品 icon 顯示開關（P2-12）；資料（P2-13）。還沒做的功能不顯示（P1-19 確認）。
 
 type Place = Location | Category;
 
-// 說明文字只留目前成立的部分：原型寫「改名稱和 icon」，icon 要到 P2-11 才能改（P1-19 確認）
+// 說明文字照原型。icon 自選在 P2-11 做好，所以加回「和 icon」
 const SECTION_NOTE: Record<PlaceKind, string> = {
   location:
-    "點一下可以改名稱。這個順序就是首頁的排列順序，有逾期的位置會暫時置頂。",
-  category: "點一下可以改名稱。類別只負責分組與 icon，物品沿用類別的 icon。",
+    "點一下可以改名稱和 icon。這個順序就是首頁的排列順序，有逾期的位置會暫時置頂。",
+  category:
+    "點一下可以改名稱和 icon。類別只負責分組與 icon，物品沿用類別的 icon。",
 };
+
+// 原型寫「用箭頭調整順序。正式版可以直接拖曳把手…」；實作改成拖曳（P2-11 確認）
+const REORDER_NOTE = "按住左邊的把手拖曳，調整順序。";
 
 const THEME_OPTIONS: {
   value: ThemePreference;
@@ -79,6 +83,15 @@ function ThemeSegment() {
   );
 }
 
+/** 屬於這個位置或類別的物品數 */
+function countItems(kind: PlaceKind, place: Place, items: readonly Item[]) {
+  return items.filter((item) =>
+    kind === "location"
+      ? item.locationId === place.id
+      : item.categoryId === place.id,
+  ).length;
+}
+
 function PlaceSection({
   kind,
   places,
@@ -92,50 +105,72 @@ function PlaceSection({
   onAdd: () => void;
   onEdit: (place: Place) => void;
 }) {
-  const countOf = (place: Place) =>
-    items.filter((item) =>
-      kind === "location"
-        ? item.locationId === place.id
-        : item.categoryId === place.id,
-    ).length;
+  // 排序模式只有位置有（照原型與 PRODUCT.md §4.6）；只有一個位置時沒東西可排，不顯示按鈕
+  const [reordering, setReordering] = useState(false);
+  const canReorder = kind === "location" && places.length > 1;
 
   return (
     <section>
-      <SectionDivider title={PLACE_WORD[kind]} />
+      {kind === "location" ? (
+        <div className="mb-2.5 mt-6 flex items-center gap-2.5">
+          <h2 className="whitespace-nowrap text-[13px] font-semibold tracking-wide text-ink-2">
+            {PLACE_WORD[kind]}
+          </h2>
+          <span className="h-px flex-1 bg-line" />
+          {(canReorder || reordering) && (
+            <button
+              type="button"
+              onClick={() => setReordering(!reordering)}
+              className="whitespace-nowrap text-[13px] font-medium text-accent"
+            >
+              {reordering ? "完成" : "調整順序"}
+            </button>
+          )}
+        </div>
+      ) : (
+        <SectionDivider title={PLACE_WORD[kind]} />
+      )}
       <div className="overflow-hidden rounded-2xl bg-surface shadow-card">
-        {places.map((place, index) => (
-          <button
-            key={place.id}
-            type="button"
-            onClick={() => onEdit(place)}
-            className={`flex w-full items-center gap-3 px-3.5 py-3 text-left ${index === 0 ? "" : "border-t border-line-2"}`}
-          >
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-line-2 text-ink-2">
-              <Icon name={place.icon} size={19} />
-            </span>
-            <span className="min-w-0 flex-1 truncate text-[15px]">
-              {place.name}
-            </span>
-            <span className="whitespace-nowrap font-mono text-[12px] text-ink-3">
-              {countOf(place)} 項
-            </span>
-            <span className="text-ink-3">
-              <ChevronRight size={16} strokeWidth={1.75} aria-hidden />
-            </span>
-          </button>
-        ))}
-        <button
-          type="button"
-          onClick={onAdd}
-          // 原型一定有列表項目，新增鍵固定有上框線；沒有任何項目時不加，卡片頂端才不會多一條線
-          className={`flex w-full items-center gap-2 px-3.5 py-3 text-[14px] text-accent ${places.length === 0 ? "" : "border-t border-line-2"}`}
-        >
-          <Plus size={17} strokeWidth={1.75} aria-hidden />
-          新增{PLACE_WORD[kind]}
-        </button>
+        {reordering ? (
+          <LocationReorderList locations={places as readonly Location[]} />
+        ) : (
+          <>
+            {places.map((place, index) => (
+              <button
+                key={place.id}
+                type="button"
+                onClick={() => onEdit(place)}
+                className={`flex w-full items-center gap-3 px-3.5 py-3 text-left ${index === 0 ? "" : "border-t border-line-2"}`}
+              >
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-line-2 text-ink-2">
+                  <Icon name={place.icon} size={19} />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[15px]">
+                  {place.name}
+                </span>
+                <span className="whitespace-nowrap font-mono text-[12px] text-ink-3">
+                  {countItems(kind, place, items)} 項
+                </span>
+                <span className="text-ink-3">
+                  <ChevronRight size={16} strokeWidth={1.75} aria-hidden />
+                </span>
+              </button>
+            ))}
+            {/* 排序模式時隱藏新增鍵（照原型） */}
+            <button
+              type="button"
+              onClick={onAdd}
+              // 原型一定有列表項目，新增鍵固定有上框線；沒有任何項目時不加，卡片頂端才不會多一條線
+              className={`flex w-full items-center gap-2 px-3.5 py-3 text-[14px] text-accent ${places.length === 0 ? "" : "border-t border-line-2"}`}
+            >
+              <Plus size={17} strokeWidth={1.75} aria-hidden />
+              新增{PLACE_WORD[kind]}
+            </button>
+          </>
+        )}
       </div>
       <p className="mt-2 text-[12px] leading-relaxed text-ink-3">
-        {SECTION_NOTE[kind]}
+        {reordering ? REORDER_NOTE : SECTION_NOTE[kind]}
       </p>
     </section>
   );
@@ -249,6 +284,11 @@ function SettingsPage() {
                   sheet.kind === "location" ? locations.data : categories.data
                 }
                 target={sheet.target}
+                itemCount={
+                  sheet.target === null
+                    ? 0
+                    : countItems(sheet.kind, sheet.target, items.data)
+                }
                 onClose={() => setSheet(null)}
               />
             )}
