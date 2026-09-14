@@ -24,10 +24,10 @@ import {
 import { buildItemDetailData } from "./itemDetailData.ts";
 import type { ItemEntry } from "./itemEntries.ts";
 import { previewName } from "./newItemForm.ts";
+import PhotoField from "./PhotoField.tsx";
 import { useItemEntriesData } from "./useItemEntriesData.ts";
 
 // 版面照 docs/prototype/p0.html 的 renderEdit()。
-// 這一步不做：物品照片（P2-3）。
 
 function EditItemForm({
   entry,
@@ -236,6 +236,22 @@ function EditItemForm({
           // 「購買通路」改記在每次的更換紀錄上，物品備註只放不太會變的資訊（2026-09-13 原型改版）
           placeholder="安裝位置、機身型號等注意事項…"
           className={`${INPUT_CLASS} leading-relaxed`}
+        />
+      </div>
+
+      <div className="mt-4">
+        <p className={LABEL_CLASS}>
+          物品照片{" "}
+          <span className="font-normal text-ink-3">
+            機身、型號貼紙 · 最多 5 張
+          </span>
+        </p>
+        {/* 照片立刻上傳與刪除，不等按儲存（見 PhotoField） */}
+        <PhotoField
+          target={{ collection: "items", id: item.id }}
+          photos={item.photos}
+          max={5}
+          variant="item"
         />
       </div>
 

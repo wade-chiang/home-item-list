@@ -63,7 +63,14 @@ describe("toItem", () => {
       note: null,
       paused: false,
       pausedUntil: null,
+      photos: [],
     });
+  });
+
+  it("照片檔名原樣帶出", () => {
+    expect(
+      toItem({ ...itemResponse, photos: ["a_1.jpg", "b_2.jpg"] }).photos,
+    ).toEqual(["a_1.jpg", "b_2.jpg"]);
   });
 
   it("暫停中且有預計恢復日", () => {
@@ -102,6 +109,7 @@ describe("toLog", () => {
       note: null,
       purchaseId: null,
       createdAt: "2026-09-11T14:59:13.744Z",
+      photos: [],
       replacedOn: null,
       expectedDue: "2026-12-01",
     });
@@ -243,10 +251,14 @@ describe("寫出時把 null 轉回空字串", () => {
     });
   });
 
-  it("寫出再讀回，內容不變", () => {
-    const log = toLog(logResponse);
+  it("寫出再讀回，除了照片以外內容不變", () => {
+    const log = toLog({ ...logResponse, photos: ["a_1.jpg"] });
     const record = toLogRecord(log);
-    expect(toLog({ ...record, created: logResponse.created })).toEqual(log);
+    // 照片刻意不寫出：update 時送 photos 會刪掉沒列到的檔案（見 toItemRecord 的註解）
+    expect(record).not.toHaveProperty("photos");
+    expect(
+      toLog({ ...record, created: logResponse.created, photos: log.photos }),
+    ).toEqual(log);
   });
 });
 

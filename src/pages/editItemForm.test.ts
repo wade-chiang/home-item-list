@@ -24,6 +24,7 @@ const item: Item = {
   note: "濾網在上蓋",
   paused: false,
   pausedUntil: null,
+  photos: [],
 };
 
 const latestLog: Log = {
@@ -36,6 +37,7 @@ const latestLog: Log = {
   model: "淨呼吸 9808",
   note: null,
   purchaseId: null,
+  photos: [],
   createdAt: "2026-06-01T10:00:00.000Z",
 };
 

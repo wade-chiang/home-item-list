@@ -25,6 +25,7 @@ const base = {
   model: null,
   note: null,
   purchaseId: null,
+  photos: [],
 };
 
 /** 有更換日期的紀錄 */
@@ -70,6 +71,7 @@ const activeItem: Item = {
   note: null,
   paused: false,
   pausedUntil: null,
+  photos: [],
 };
 
 const ids = (logs: Log[]) => logs.map((log) => log.id);

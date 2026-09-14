@@ -34,9 +34,12 @@ import {
   type NewItemFormState,
   previewName,
 } from "./newItemForm.ts";
+import PackagePhotoButton from "./PackagePhotoButton.tsx";
+import StagedPhotoField from "./StagedPhotoField.tsx";
 
 // 版面照 docs/prototype/p0.html 的 renderAdd()。
-// 這一步不做（P1-14 確認）：拍耗材包裝、物品照片（P2-3）、花費（P2-8）。
+// 這一步不做：花費（P2-8）。
+// 耗材包裝照片與物品照片先暫存在表單，按新增時跟物品與第一筆更換紀錄一起上傳（P2-3 確認）。
 
 const LAST_REPLACED_OPTIONS: { value: LastReplaced; label: string }[] = [
   { value: "today", label: "今天" },
@@ -61,6 +64,8 @@ function NewItemForm({
   );
   const [errors, setErrors] = useState<NewItemFormErrors>({});
   const createItem = useCreateItemWithFirstLog();
+  const [packagePhoto, setPackagePhoto] = useState<File | null>(null);
+  const [itemPhotos, setItemPhotos] = useState<File[]>([]);
   const queryClient = useQueryClient();
   const showToast = useToast();
   const navigate = useNavigate();
@@ -100,7 +105,14 @@ function NewItemForm({
     }
     setErrors({});
     createItem.mutate(
-      { item: result.item, firstLog: result.firstLog },
+      {
+        item: result.item,
+        firstLog: result.firstLog,
+        photos: {
+          item: itemPhotos,
+          firstLog: packagePhoto === null ? [] : [packagePhoto],
+        },
+      },
       {
         onSuccess: ({ item }) => {
           showToast({
@@ -121,6 +133,12 @@ function NewItemForm({
 
   return (
     <form ref={formRef} onSubmit={onSubmit} noValidate>
+      <PackagePhotoButton
+        photo={packagePhoto}
+        onChange={setPackagePhoto}
+        variant="card"
+      />
+
       <div className="mt-5 grid grid-cols-2 gap-2.5">
         <div>
           <label htmlFor={`${id}-location`} className={LABEL_CLASS}>
@@ -316,6 +334,21 @@ function NewItemForm({
           onChange={(event) => set("note", event.target.value)}
           placeholder="安裝位置、機身型號等注意事項…"
           className={`${INPUT_CLASS} leading-relaxed`}
+        />
+      </div>
+
+      <div className="mt-4">
+        <p className={LABEL_CLASS}>
+          物品照片{" "}
+          <span className="font-normal text-ink-3">
+            機身、型號貼紙、濾網裝在哪
+          </span>
+        </p>
+        <StagedPhotoField
+          photos={itemPhotos}
+          onChange={setItemPhotos}
+          max={5}
+          variant="item"
         />
       </div>
 

@@ -108,6 +108,7 @@ const itemRecord = z.object({
   note: optionalText,
   paused: z.boolean(),
   pausedUntil: optionalIsoDate,
+  photos: z.array(z.string().min(1)),
 });
 
 export function toItem(raw: unknown): Item {
@@ -119,6 +120,7 @@ export function toItem(raw: unknown): Item {
     label: r.label,
     leadDays: r.leadDays,
     note: r.note,
+    photos: r.photos,
   };
   if (r.paused && r.pausedUntil !== null) {
     return { ...base, paused: true, pausedUntil: r.pausedUntil };
@@ -144,6 +146,7 @@ const logRecord = z.object({
   note: optionalText,
   purchase: optionalText,
   created: pbTimestamp,
+  photos: z.array(z.string().min(1)),
 });
 
 export function toLog(raw: unknown): Log {
@@ -157,6 +160,7 @@ export function toLog(raw: unknown): Log {
     note: r.note,
     purchaseId: r.purchase as PurchaseId | null,
     createdAt: r.created,
+    photos: r.photos,
   };
   if (r.replacedOn !== null && r.expectedDue === null) {
     return { ...base, replacedOn: r.replacedOn, expectedDue: null };
@@ -209,8 +213,9 @@ function orEmpty(value: string | null): string {
   return value ?? "";
 }
 
-// householdId 是保留欄位（CLAUDE.md「明確不做」多人共用），不寫入，PocketBase 存成空字串
-export function toItemRecord(item: Item) {
+// householdId 是保留欄位（CLAUDE.md「明確不做」多人共用），不寫入，PocketBase 存成空字串。
+// photos 刻意不寫出：update 時送 photos 會把沒列到的檔案刪掉。照片只經過 repo 的 addPhotos／removePhoto 增減
+export function toItemRecord(item: DistributiveOmit<Item, "photos">) {
   return {
     id: item.id,
     location: item.locationId,
@@ -223,8 +228,10 @@ export function toItemRecord(item: Item) {
   };
 }
 
-/** createdAt 由 PocketBase 在建立時寫入，不從前端送出 */
-export function toLogRecord(log: DistributiveOmit<Log, "createdAt">) {
+/** createdAt 由 PocketBase 在建立時寫入，不從前端送出；photos 不寫出，理由同 toItemRecord */
+export function toLogRecord(
+  log: DistributiveOmit<Log, "createdAt" | "photos">,
+) {
   return {
     id: log.id,
     item: log.itemId,

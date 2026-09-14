@@ -42,6 +42,8 @@ export type Item = {
   /** 提前提醒天數。可以是 0：到期當天才提醒 */
   leadDays: number;
   note: string | null;
+  /** 物品照片（機身、型號貼紙）的檔名，最多 5 張。網址由 repo 層的 photoUrl() 組出，畫面不自己組 */
+  photos: readonly string[];
 } & ItemPause;
 
 /** 日期未記錄時才有預計到期日；補上日期時清掉（PRODUCT.md §2），用型別排除兩者皆有或皆無 */
@@ -60,6 +62,8 @@ export type Log = {
   purchaseId: PurchaseId | null;
   /** ISO 8601 UTC 時間戳。只用於「同一天較晚建立的為較新」 */
   createdAt: string;
+  /** 耗材照片（包裝、型號標籤）的檔名，最多 2 張 */
+  photos: readonly string[];
 } & LogDate;
 
 export type Purchase = {

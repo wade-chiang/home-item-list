@@ -37,6 +37,7 @@ function item(id: string): Item {
     note: null,
     paused: false,
     pausedUntil: null,
+    photos: [],
   };
 }
 
@@ -49,6 +50,7 @@ function logOn(id: string, itemId: string, replacedOn: string): Log {
     model: null,
     note: null,
     purchaseId: null,
+    photos: [],
     createdAt: `${replacedOn}T10:00:00.000Z`,
     replacedOn: d(replacedOn),
     expectedDue: null,
@@ -64,6 +66,7 @@ function logUnknownDate(id: string, itemId: string, expectedDue: string): Log {
     model: null,
     note: null,
     purchaseId: null,
+    photos: [],
     createdAt: "2026-01-01T10:00:00.000Z",
     replacedOn: null,
     expectedDue: d(expectedDue),

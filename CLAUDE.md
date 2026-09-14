@@ -92,6 +92,7 @@ src/
   pages/
   components/
   preferences.ts     這支手機自己的偏好（外觀），存在 localStorage，不是資料庫的資料，所以不在 repo/
+  photoFile.ts       上傳前把照片縮小並轉成 JPEG（瀏覽器 canvas，不是資料存取，所以不在 repo/）
 pb_migrations/       PocketBase collection 定義（**進 git**）
 pb_public/           前端 build 產物（不進 git）
 pb_data/             PocketBase 資料與照片（volume，不進 git）
@@ -171,6 +172,8 @@ PocketBase 沒有 ORM 產生的型別，`src/shared/types.ts` 是**手寫維護*
 
 > ⚠️ **定案後不要改回空字串**。TypeScript 抓不到舊的判斷：把 `label: string | null` 改成 `label: string` 後，`label === null`、`label ?? "（無）"` 都不會報錯，只會悄悄失效（P1-7 以 TS 7.0.2 實測）。
 
+**寫入紀錄時不要帶 `photos`**：PocketBase 更新時帶了 `photos`，沒列在裡面的檔案會被刪掉。`toItemRecord`、`toLogRecord` 刻意不寫出照片，照片只經過 repo 的 `addPhoto`、`removePhoto` 增減；建立紀錄時才把檔案一起帶上。
+
 ### 到期日是推導值，唯一實作在 `src/shared/due.ts`
 
 ```
@@ -240,6 +243,10 @@ v0.40.3 原始碼確認：rule 為 `null` 時只有管理員能存取（其他�
 新增物品時就寫入第一筆更換紀錄，**沒有例外**：選了「不知道上次更換日」也建立一筆，日期留空、存預計到期日。只剩一筆時不能刪除。
 
 *為什麼*：讓 due 的計算只有一條路徑，不會出現「物品存在但算不出到期日」的狀態。
+
+### 底部面板會讓面板外的東西不能操作
+
+底部面板用 `<dialog>` 的 `showModal()`，打開期間面板以外的元素都會被瀏覽器設成不可操作，連 popover 也一樣。所以提示條要放進最上層的面板裡；面板被移除時，要搬到下一個面板或回到頁面上（`src/components/ToastProvider.tsx`，P2-3 手機實測）。之後新增任何「面板開著時也要能按」的東西，都要照這個做法。
 
 ---
 

@@ -135,8 +135,15 @@ export function useUpdateItemPause() {
 export function useCreateLogClearingPause() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ itemId, log }: { itemId: ItemId; log: NewLog }) =>
-      createLogClearingPause(itemId, log),
+    mutationFn: ({
+      itemId,
+      log,
+      photos,
+    }: {
+      itemId: ItemId;
+      log: NewLog;
+      photos: readonly Blob[];
+    }) => createLogClearingPause(itemId, log, photos),
     onSuccess: () => invalidateItemData(queryClient),
   });
 }
@@ -145,8 +152,15 @@ export function useCreateLogClearingPause() {
 export function useCreateLog() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ itemId, log }: { itemId: ItemId; log: NewLog }) =>
-      createLog(itemId, log),
+    mutationFn: ({
+      itemId,
+      log,
+      photos,
+    }: {
+      itemId: ItemId;
+      log: NewLog;
+      photos: readonly Blob[];
+    }) => createLog(itemId, log, photos),
     onSuccess: () => invalidateItemData(queryClient),
   });
 }
@@ -190,8 +204,15 @@ export function useDeleteLog() {
 export function useCreateItemWithFirstLog() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ item, firstLog }: { item: NewItem; firstLog: NewLog }) =>
-      createItemWithFirstLog(item, firstLog),
+    mutationFn: ({
+      item,
+      firstLog,
+      photos,
+    }: {
+      item: NewItem;
+      firstLog: NewLog;
+      photos: { item: readonly Blob[]; firstLog: readonly Blob[] };
+    }) => createItemWithFirstLog(item, firstLog, photos),
     onSuccess: () => invalidateItemData(queryClient),
   });
 }

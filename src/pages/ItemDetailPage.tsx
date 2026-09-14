@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, Pause, Pencil, Play, Trash } from "lucide-react";
+import { Camera, ChevronRight, Pause, Pencil, Play, Trash } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useParams } from "react-router";
 import ItemNotFound from "../components/ItemNotFound.tsx";
@@ -21,10 +21,11 @@ import { buildItemDetailData, type HistoryRow } from "./itemDetailData.ts";
 import type { ItemEntry } from "./itemEntries.ts";
 import LogEditSheet from "./LogEditSheet.tsx";
 import PauseSheet from "./PauseSheet.tsx";
+import PhotoField from "./PhotoField.tsx";
 import { useItemEntriesData } from "./useItemEntriesData.ts";
 
 // 版面照 docs/prototype/p0.html 的 renderDetail()。
-// 這一步不做（P1-13 確認）：實際間隔回饋與型號／週期變更標示（P2-9）、物品照片與耗材照片張數（P2-3）、價格（P2-8）。
+// 這一步不做（P1-13 確認）：實際間隔回饋與型號／週期變更標示（P2-9）、價格（P2-8）。
 // 還不能用的操作照原型顯示但停用，各 task 做到時再接上。
 
 function SummaryCard({ entry }: { entry: ItemEntry }) {
@@ -129,6 +130,30 @@ function InfoCard({ entry }: { entry: ItemEntry }) {
   );
 }
 
+/** 物品照片卡片，版面照原型詳情頁的「物品照片」 */
+function ItemPhotosCard({ item }: { item: ItemEntry["item"] }) {
+  return (
+    <div className="mt-3 rounded-2xl bg-surface px-4 py-3.5 shadow-card">
+      <div className="flex items-baseline justify-between gap-3">
+        <h3 className="whitespace-nowrap text-[13px] font-semibold text-ink-2">
+          物品照片
+        </h3>
+        <span className="text-[11.5px] text-ink-3">
+          機身、型號貼紙 · 最多 5 張
+        </span>
+      </div>
+      <div className="mt-2.5">
+        <PhotoField
+          target={{ collection: "items", id: item.id }}
+          photos={item.photos}
+          max={5}
+          variant="item"
+        />
+      </div>
+    </div>
+  );
+}
+
 function HistoryItem({
   row,
   onEdit,
@@ -175,11 +200,19 @@ function HistoryItem({
               {log.note}
             </p>
           )}
-          {log.replacedOn === null && (
+          {(log.photos.length > 0 || log.replacedOn === null) && (
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-ink-3">
-              <span className="whitespace-nowrap">
-                新增時預計 {log.expectedDue} 到期
-              </span>
+              {log.photos.length > 0 && (
+                <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                  <Camera size={13} strokeWidth={1.75} aria-hidden />
+                  耗材照片 {log.photos.length} 張
+                </span>
+              )}
+              {log.replacedOn === null && (
+                <span className="whitespace-nowrap">
+                  新增時預計 {log.expectedDue} 到期
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -299,8 +332,9 @@ function ItemDetailPage() {
   const resume = useUpdateItemPause();
   const queryClient = useQueryClient();
   const showToast = useToast();
-  // 正在編輯的那筆更換紀錄；null 表示面板沒開
-  const [editingLog, setEditingLog] = useState<Log | null>(null);
+  // 正在編輯的那筆更換紀錄的 id；null 表示面板沒開。
+  // 存 id 而不是整筆資料：面板裡加刪照片後資料會重抓，面板要拿到最新的照片清單
+  const [editingLogId, setEditingLogId] = useState<Log["id"] | null>(null);
 
   // 標題是物品的顯示名稱（照原型）；資料還沒到時先顯示「物品詳情」
   const title = data?.found
@@ -330,7 +364,11 @@ function ItemDetailPage() {
           <>
             <SummaryCard entry={data.entry} />
             <InfoCard entry={data.entry} />
-            <HistoryCard history={data.history} onEdit={setEditingLog} />
+            <ItemPhotosCard item={data.entry.item} />
+            <HistoryCard
+              history={data.history}
+              onEdit={(log) => setEditingLogId(log.id)}
+            />
             <ItemActions
               itemId={itemId}
               // 用推導出的狀態：日期已過、推導上已恢復的物品顯示「暫停」
@@ -386,14 +424,22 @@ function ItemDetailPage() {
                 onClose={() => setDoneOpen(false)}
               />
             )}
-            {editingLog !== null && (
-              <LogEditSheet
-                entry={data.entry}
-                logs={data.history.map((row) => row.log)}
-                log={editingLog}
-                onClose={() => setEditingLog(null)}
-              />
-            )}
+            {(() => {
+              const editingLog = data.history.find(
+                (row) => row.log.id === editingLogId,
+              )?.log;
+              // 找不到時（例如剛被刪除）就不顯示面板
+              return (
+                editingLog !== undefined && (
+                  <LogEditSheet
+                    entry={data.entry}
+                    logs={data.history.map((row) => row.log)}
+                    log={editingLog}
+                    onClose={() => setEditingLogId(null)}
+                  />
+                )
+              );
+            })()}
             {deleteOpen && (
               <DeleteItemSheet
                 entry={data.entry}

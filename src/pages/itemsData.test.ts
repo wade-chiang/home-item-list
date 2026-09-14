@@ -27,6 +27,7 @@ function item(id: string, categoryId: string, paused = false): Item {
     label: null,
     leadDays: 7,
     note: null,
+    photos: [],
   };
   return paused
     ? { ...base, paused: true, pausedUntil: d("2026-12-01") }
@@ -43,6 +44,7 @@ function log(itemId: string, cycleDays: number): Log {
     model: null,
     note: null,
     purchaseId: null,
+    photos: [],
     createdAt: "2026-09-10T10:00:00.000Z",
     replacedOn: d("2026-09-10"),
     expectedDue: null,

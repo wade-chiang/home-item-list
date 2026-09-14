@@ -21,6 +21,7 @@ function dated(id: string, replacedOn: string, overrides: Partial<Log> = {}) {
     model: "9808",
     note: null,
     purchaseId: null,
+    photos: [],
     createdAt: `${replacedOn}T10:00:00.000Z`,
     ...overrides,
   } as Log;

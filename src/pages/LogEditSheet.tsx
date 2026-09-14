@@ -11,7 +11,7 @@ import {
 } from "../components/formStyles.ts";
 import { useToast } from "../components/toastContext.ts";
 import { invalidateItemData, useDeleteLog, useUpdateLog } from "../queries.ts";
-import { restoreLog, updateLog } from "../repo/index.ts";
+import { downloadPhotos, restoreLog, updateLog } from "../repo/index.ts";
 import { getToday } from "../shared/date.ts";
 import { displayName } from "../shared/display.ts";
 import { latestLog } from "../shared/due.ts";
@@ -25,9 +25,11 @@ import {
   type LogFormErrors,
   type LogFormState,
 } from "./logForm.ts";
+import PhotoField from "./PhotoField.tsx";
 
 // 編輯更換紀錄的面板，版面照 docs/prototype/p0.html 的 openLogEdit()（PRODUCT.md §5.4）。
-// 這一步不做：耗材照片（P2-3）、這次有買新的與價格（P2-8）。
+// 這一步不做：這次有買新的與價格（P2-8）。
+// 耗材照片立刻上傳與刪除，不等按儲存（見 PhotoField）。
 // 刪除不跳確認：照原型，結果寫在提示條上並可復原。
 
 type Props = {
@@ -56,7 +58,9 @@ function LogEditSheet({ entry, logs, log, onClose }: Props) {
   const showToast = useToast();
   const id = useId();
 
-  const isPending = update.isPending || remove.isPending;
+  const [backingUp, setBackingUp] = useState(false);
+  const [backupError, setBackupError] = useState<string | null>(null);
+  const isPending = update.isPending || remove.isPending || backingUp;
   const submitError = remove.error ?? update.error;
 
   const set = <K extends keyof LogFormState>(key: K, value: LogFormState[K]) =>
@@ -99,16 +103,31 @@ function LogEditSheet({ entry, logs, log, onClose }: Props) {
     });
   };
 
-  const onDelete = () => {
+  const onDelete = async () => {
     const after = logs.filter((other) => other.id !== log.id);
     const outcome = describeOutcome(logs, after, null);
+    // 耗材照片刪了就救不回來，先下載留作復原（P2-3 確認）；下載失敗就不刪
+    setBackupError(null);
+    setBackingUp(true);
+    let photos: Blob[];
+    try {
+      photos = await downloadPhotos(
+        { collection: "logs", id: log.id },
+        log.photos,
+      );
+    } catch (error) {
+      setBackupError(error instanceof Error ? error.message : String(error));
+      return;
+    } finally {
+      setBackingUp(false);
+    }
     remove.mutate(log, {
       onSuccess: () => {
         showToast({
           message: outcome === null ? "已刪除更換紀錄" : `已刪除 · ${outcome}`,
           // 復原＝用原本的 id 把這筆建立回去
           onUndo: () => {
-            void restoreLog(log)
+            void restoreLog(log, photos)
               .then(() => invalidateItemData(queryClient))
               .catch(undoFailed);
           },
@@ -228,6 +247,18 @@ function LogEditSheet({ entry, logs, log, onClose }: Props) {
         </div>
 
         <div className="mt-3">
+          <p className={LABEL_CLASS}>
+            耗材照片 <span className="font-normal text-ink-3">最多 2 張</span>
+          </p>
+          <PhotoField
+            target={{ collection: "logs", id: log.id }}
+            photos={log.photos}
+            max={2}
+            variant="log"
+          />
+        </div>
+
+        <div className="mt-3">
           <label htmlFor={`${id}-note`} className={LABEL_CLASS}>
             備註
           </label>
@@ -244,6 +275,11 @@ function LogEditSheet({ entry, logs, log, onClose }: Props) {
         {errors.cycle !== undefined && (
           <p className="mt-3 text-[13px] text-overdue">{errors.cycle}</p>
         )}
+        {backupError !== null && (
+          <p className="mt-3 rounded-xl bg-overdue-soft px-3.5 py-3 text-[13px] leading-relaxed text-overdue">
+            照片備份失敗，沒有刪除：{backupError}
+          </p>
+        )}
         {submitError !== null && !isPending && (
           <p className="mt-3 rounded-xl bg-overdue-soft px-3.5 py-3 text-[13px] leading-relaxed text-overdue">
             {remove.error !== null ? "刪除失敗" : "儲存失敗"}：
@@ -259,11 +295,11 @@ function LogEditSheet({ entry, logs, log, onClose }: Props) {
         </button>
         <button
           type="button"
-          onClick={onDelete}
+          onClick={() => void onDelete()}
           disabled={!deletable || isPending}
           className="mt-2 w-full rounded-xl py-3 text-[14px] text-overdue disabled:text-ink-3"
         >
-          {remove.isPending ? "刪除中…" : "刪除這筆紀錄"}
+          {remove.isPending || backingUp ? "刪除中…" : "刪除這筆紀錄"}
         </button>
         {!deletable && (
           <p className="text-center text-[12px] leading-relaxed text-ink-3">

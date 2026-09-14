@@ -30,9 +30,11 @@ import {
   isSameCycle,
 } from "./doneForm.ts";
 import type { ItemEntry } from "./itemEntries.ts";
+import PackagePhotoButton from "./PackagePhotoButton.tsx";
 
 // 換好了確認面板，首頁與物品詳情頁共用。版面照 docs/prototype/p0.html 的 openDone()。
-// 這一步不做：拍耗材包裝（P2，見 TASKS.md P1-15）、這次有買新的（P2-7）。
+// 這一步不做：這次有買新的（P2-7）。
+// 「加耗材包裝照片」選好的照片暫存在面板，按確認時跟更換紀錄一起上傳（P2-3 確認）。
 // 暫停中的物品按換好了會同時取消暫停（PRODUCT.md §5.1，P2-1）。
 
 const DATE_OPTIONS: { value: DoneDate; label: string }[] = [
@@ -60,6 +62,7 @@ function DoneSheet({ entry, onClose }: Props) {
   const plainCreate = useCreateLog();
   const pauseClearingCreate = useCreateLogClearingPause();
   const createLog = clearsPause ? pauseClearingCreate : plainCreate;
+  const [packagePhoto, setPackagePhoto] = useState<File | null>(null);
   const queryClient = useQueryClient();
   const showToast = useToast();
   const id = useId();
@@ -88,7 +91,11 @@ function DoneSheet({ entry, onClose }: Props) {
     }
     setErrors({});
     createLog.mutate(
-      { itemId: item.id, log: result.log },
+      {
+        itemId: item.id,
+        log: result.log,
+        photos: packagePhoto === null ? [] : [packagePhoto],
+      },
       {
         onSuccess: (created) => {
           showToast({
@@ -165,8 +172,13 @@ function DoneSheet({ entry, onClose }: Props) {
           )}
         </div>
 
-        {/* 原型這裡上方是 mt-4 的「拍耗材包裝」按鈕、下方 mt-3。這一步不顯示那顆按鈕，間距改用 mt-4 補上 */}
-        <div className="mt-4 grid grid-cols-2 gap-2">
+        <PackagePhotoButton
+          photo={packagePhoto}
+          onChange={setPackagePhoto}
+          variant="inline"
+        />
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
           <div>
             <label htmlFor={`${id}-brand`} className={LABEL_CLASS}>
               品牌

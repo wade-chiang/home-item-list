@@ -33,6 +33,7 @@ function item(id: string, locationId: string, categoryId: string): Item {
     note: null,
     paused: false,
     pausedUntil: null,
+    photos: [],
   };
 }
 
@@ -51,6 +52,7 @@ function log(
     model: null,
     note: null,
     purchaseId: null,
+    photos: [],
     createdAt: "2026-09-01T10:00:00.000Z",
     replacedOn: d(replacedOn),
     expectedDue: null,

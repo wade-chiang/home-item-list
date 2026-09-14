@@ -22,6 +22,7 @@ function log(overrides: Partial<Log> = {}): Log {
     model: "淨呼吸 9808",
     note: null,
     purchaseId: null,
+    photos: [],
     createdAt: "2026-06-01T10:00:00.000Z",
     ...overrides,
   } as Log;

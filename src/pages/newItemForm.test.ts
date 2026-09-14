@@ -93,6 +93,7 @@ describe("hasDuplicate 與 previewName", () => {
     note: null,
     paused: false,
     pausedUntil: null,
+    photos: [],
   };
 
   it("同位置同類別已有物品時為 true，換位置就不是", () => {
