@@ -10,10 +10,12 @@ import {
   STATUS_LABEL,
 } from "../components/statusStyles.ts";
 import { brandModelText, displayName, isFilled } from "../shared/display.ts";
+import type { Log } from "../shared/types.ts";
 import DeleteItemSheet from "./DeleteItemSheet.tsx";
 import DoneSheet from "./DoneSheet.tsx";
 import { buildItemDetailData, type HistoryRow } from "./itemDetailData.ts";
 import type { ItemEntry } from "./itemEntries.ts";
+import LogEditSheet from "./LogEditSheet.tsx";
 import { useItemEntriesData } from "./useItemEntriesData.ts";
 
 // 版面照 docs/prototype/p0.html 的 renderDetail()。
@@ -121,16 +123,21 @@ function InfoCard({ entry }: { entry: ItemEntry }) {
   );
 }
 
-function HistoryItem({ row }: { row: HistoryRow }) {
+function HistoryItem({
+  row,
+  onEdit,
+}: {
+  row: HistoryRow;
+  onEdit: (log: Log) => void;
+}) {
   const { log, gapDays, isOldest } = row;
   const model = brandModelText(log);
 
   return (
     <li className="border-t border-line-2 first:border-t-0">
-      {/* P1-18 接上編輯面板前先停用 */}
       <button
         type="button"
-        disabled
+        onClick={() => onEdit(log)}
         className="flex w-full items-start gap-2 py-3 text-left"
       >
         <div className="min-w-0 flex-1">
@@ -156,6 +163,12 @@ function HistoryItem({ row }: { row: HistoryRow }) {
               </span>
             )}
           </div>
+          {/* 更換紀錄的備註：有填才顯示，照原樣換行（PRODUCT.md §4.3） */}
+          {isFilled(log.note) && (
+            <p className="mt-1 whitespace-pre-line break-words text-[12.5px] leading-relaxed text-ink-2">
+              {log.note}
+            </p>
+          )}
           {log.replacedOn === null && (
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-ink-3">
               <span className="whitespace-nowrap">
@@ -172,7 +185,13 @@ function HistoryItem({ row }: { row: HistoryRow }) {
   );
 }
 
-function HistoryCard({ history }: { history: HistoryRow[] }) {
+function HistoryCard({
+  history,
+  onEdit,
+}: {
+  history: HistoryRow[];
+  onEdit: (log: Log) => void;
+}) {
   return (
     <div className="mt-3 rounded-2xl bg-surface px-4 pb-1 pt-3.5 shadow-card">
       <h3 className="text-[13px] font-semibold text-ink-2">更換歷史</h3>
@@ -181,7 +200,7 @@ function HistoryCard({ history }: { history: HistoryRow[] }) {
       </p>
       <ol className="mt-1">
         {history.map((row) => (
-          <HistoryItem key={row.log.id} row={row} />
+          <HistoryItem key={row.log.id} row={row} onEdit={onEdit} />
         ))}
       </ol>
     </div>
@@ -260,6 +279,8 @@ function ItemDetailPage() {
   // 換好了面板是否開著。確認後留在詳情頁，更換歷史會直接多出一筆（P1-15 確認）
   const [doneOpen, setDoneOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  // 正在編輯的那筆更換紀錄；null 表示面板沒開
+  const [editingLog, setEditingLog] = useState<Log | null>(null);
 
   // 標題是物品的顯示名稱（照原型）；資料還沒到時先顯示「物品詳情」
   const title = data?.found
@@ -289,7 +310,7 @@ function ItemDetailPage() {
           <>
             <SummaryCard entry={data.entry} />
             <InfoCard entry={data.entry} />
-            <HistoryCard history={data.history} />
+            <HistoryCard history={data.history} onEdit={setEditingLog} />
             <ItemActions
               itemId={itemId}
               paused={data.entry.item.paused}
@@ -300,6 +321,14 @@ function ItemDetailPage() {
               <DoneSheet
                 entry={data.entry}
                 onClose={() => setDoneOpen(false)}
+              />
+            )}
+            {editingLog !== null && (
+              <LogEditSheet
+                entry={data.entry}
+                logs={data.history.map((row) => row.log)}
+                log={editingLog}
+                onClose={() => setEditingLog(null)}
               />
             )}
             {deleteOpen && (

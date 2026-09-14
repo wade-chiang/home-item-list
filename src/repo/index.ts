@@ -181,10 +181,46 @@ export async function deleteItem(id: ItemId): Promise<void> {
   await pb.collection("items").delete(id);
 }
 
+/** 刪除更換紀錄時，這個物品只剩這一筆。畫面上已經停用刪除鍵，這是 repo 層的第二道把關 */
+export class LastLogError extends Error {
+  constructor() {
+    super(
+      "只剩這一筆，不能刪除。每個物品至少要有一筆更換紀錄，到期日才算得出來。",
+    );
+    this.name = "LastLogError";
+  }
+}
+
 /**
- * 刪除一筆更換紀錄。這裡不檢查「只剩一筆時不能刪」：P1-15 只用在換好了的「復原」，
- * 刪的是剛新增的那筆，原本的紀錄都還在。P1-18 做更換紀錄的刪除時再決定這條規則放在哪一層。
+ * 刪除一筆更換紀錄。「每個物品至少一筆更換紀錄」（CLAUDE.md）在這裡把關（P1-18 決定）：
+ * 刪除前先查這個物品還有幾筆，只剩一筆就丟出 LastLogError。
+ * 先查再刪是兩個請求、不是原子操作；單人使用不會同時刪同一個物品的兩筆紀錄，所以夠用。
+ * 換好了之後的「復原」（P1-15）與編輯面板的刪除（P1-18）都用這個函式。
  */
-export async function deleteLog(id: LogId): Promise<void> {
-  await pb.collection("logs").delete(id);
+export async function deleteLog(
+  log: Pick<Log, "id" | "itemId">,
+): Promise<void> {
+  const { totalItems } = await pb.collection("logs").getList(1, 1, {
+    filter: pb.filter("item = {:itemId}", { itemId: log.itemId }),
+    fields: "id",
+  });
+  if (totalItems <= 1) {
+    throw new LastLogError();
+  }
+  await pb.collection("logs").delete(log.id);
+}
+
+/** 編輯更換紀錄：只更新這一筆。存檔後的「復原」也用這個函式，把它改回原本的值 */
+export async function updateLog(log: Log): Promise<Log> {
+  // id 放在網址上，不放進內容；建立時間由 PocketBase 管理，不送出
+  const { id, ...body } = toLogRecord(log);
+  return toLog(await pb.collection("logs").update(id, body));
+}
+
+/**
+ * 刪除更換紀錄後的「復原」：用原本的 id 建立回去。
+ * 建立時間（autodate）無法寫入，會變成復原當下；只有這筆跟另一筆同一天時，兩筆的先後可能對調
+ */
+export async function restoreLog(log: Log): Promise<void> {
+  await pb.collection("logs").create(toLogRecord(log));
 }

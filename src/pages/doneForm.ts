@@ -22,6 +22,7 @@ export type DoneFormState = {
   model: string;
   cycle: string;
   customCycle: boolean;
+  note: string;
 };
 
 export type DoneFormErrors = Partial<Record<"otherDate" | "cycle", string>>;
@@ -39,6 +40,8 @@ export function initialDoneForm(latest: Log, today: IsoDate): DoneFormState {
     cycle: String(latest.cycleDays),
     // 上次的週期不在快速選項裡時，直接打開自訂並帶入天數（照原型）
     customCycle: !CYCLE_PRESETS.includes(latest.cycleDays),
+    // 備註不預填上一次：通路與狀況每次不同，預填容易把舊內容又存一次（PRODUCT.md §5.1）
+    note: "",
   };
 }
 
@@ -108,7 +111,7 @@ export function buildDoneSubmission(
       cycleDays,
       brand: optionalText(form.brand),
       model: optionalText(form.model),
-      note: null,
+      note: optionalText(form.note),
       purchaseId: null,
     },
   };

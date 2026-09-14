@@ -53,6 +53,7 @@ describe("initialDoneForm", () => {
       model: "淨呼吸 9808",
       cycle: "90",
       customCycle: false,
+      note: "",
     });
   });
 
@@ -135,6 +136,11 @@ describe("buildDoneSubmission", () => {
 
   it.each(["", "0", "1.5", "abc"])("週期 %j 不合法", (cycle) => {
     expect(submitErrors({ ...base, cycle }).cycle).toBe("請填週期天數");
+  });
+
+  it("備註去掉頭尾空白，沒填時是 null", () => {
+    expect(submitOk({ ...base, note: " 好市多 " }).note).toBe("好市多");
+    expect(submitOk(base).note).toBeNull();
   });
 
   it("清掉品牌型號時存成 null", () => {

@@ -28,7 +28,6 @@ import { useItemEntriesData } from "./useItemEntriesData.ts";
 
 // 版面照 docs/prototype/p0.html 的 renderEdit()。
 // 這一步不做：物品照片（P2-3）。
-// 「要改更早的紀錄，請到詳情頁的更換歷史點那一筆。」先不顯示，P1-18 接上更換歷史的編輯後再加回（P1-17 確認）。
 
 function EditItemForm({
   entry,
@@ -160,7 +159,8 @@ function EditItemForm({
       <SectionDivider title="目前的耗材" />
       <p className="mb-3 rounded-xl bg-accent-soft px-3.5 py-2.5 text-[12.5px] leading-relaxed text-ink-2">
         品牌、型號、週期會寫入<b>最近一次更換紀錄</b>（
-        {latestLog.replacedOn ?? "日期未記錄"}）。
+        {latestLog.replacedOn ?? "日期未記錄"}
+        ）。要改更早的紀錄，請到詳情頁的更換歷史點那一筆。
       </p>
       <div className="grid grid-cols-2 gap-2.5">
         <div>

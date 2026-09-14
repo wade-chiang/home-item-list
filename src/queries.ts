@@ -11,6 +11,7 @@ import {
   createLocation,
   createLog,
   deleteItem,
+  deleteLog,
   getSettings,
   listCategories,
   listItems,
@@ -19,6 +20,7 @@ import {
   type NewItem,
   type NewLog,
   updateItemWithLatestLog,
+  updateLog,
 } from "./repo/index.ts";
 import type { Item, ItemId, Log } from "./shared/types.ts";
 
@@ -101,6 +103,24 @@ export function useUpdateItemWithLatestLog() {
  */
 export function useDeleteItem() {
   return useMutation({ mutationFn: deleteItem });
+}
+
+/** 編輯更換紀錄：只更新這一筆 */
+export function useUpdateLog() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateLog,
+    onSuccess: () => invalidateItemData(queryClient),
+  });
+}
+
+/** 刪除一筆更換紀錄。只剩一筆時 repo 層會丟出 LastLogError */
+export function useDeleteLog() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteLog,
+    onSuccess: () => invalidateItemData(queryClient),
+  });
 }
 
 export function useCreateItemWithFirstLog() {

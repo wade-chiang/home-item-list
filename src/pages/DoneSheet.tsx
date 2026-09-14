@@ -89,7 +89,7 @@ function DoneSheet({ entry, onClose }: Props) {
               : "已記錄 · 日期早於上次更換，到期日沒有變",
             // 復原＝刪掉剛寫入的那筆。面板已經關閉，所以直接呼叫 repo 並自己讓資料重抓
             onUndo: () => {
-              void deleteLog(created.id)
+              void deleteLog(created)
                 .then(() => invalidateItemData(queryClient))
                 .catch(() => showToast({ message: "復原失敗，請稍後再試" }));
             },
@@ -200,6 +200,21 @@ function DoneSheet({ entry, onClose }: Props) {
               ? "沿用上次"
               : `與上次不同（上次 ${previousLatest.cycleDays} 天）`}
           </p>
+        </div>
+
+        {/* 備註記在這次的更換紀錄上（PRODUCT.md §5.1） */}
+        <div className="mt-3">
+          <label htmlFor={`${id}-note`} className={LABEL_CLASS}>
+            備註
+          </label>
+          <textarea
+            id={`${id}-note`}
+            rows={2}
+            value={form.note}
+            onChange={(event) => set("note", event.target.value)}
+            placeholder="選填，例如購買通路、這次的狀況…"
+            className={`${INPUT_CLASS} leading-relaxed`}
+          />
         </div>
 
         {errors.cycle !== undefined && (
