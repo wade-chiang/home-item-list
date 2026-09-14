@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>換了沒</title>
+    <script>
+      // 在畫面出現前套用外觀設定，避免選了深色卻先閃一下淺色（P1-19 確認）。
+      // key 與 src/preferences.ts 的 THEME_STORAGE_KEY 相同，改名時兩邊要一起改；讀取失敗時維持跟隨系統
+      try {
+        var theme = localStorage.getItem("home-item-list.theme");
+        if (theme === "light" || theme === "dark") {
+          document.documentElement.setAttribute("data-theme", theme);
+        }
+      } catch (error) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
