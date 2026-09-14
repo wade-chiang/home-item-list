@@ -15,10 +15,10 @@ RUN pnpm build
 # ---- 第二階段：PocketBase ----
 # 參考官方範例 https://pocketbase.io/docs/going-to-production/ ；版本 pin 死（CLAUDE.md 紀律 3）
 FROM alpine:3.24.1
-ARG PB_VERSION=0.40.3
+ARG PB_VERSION=0.40.4
 RUN apk add --no-cache unzip ca-certificates
-# checksum 取自 v0.40.3 release 的 checksums.txt。升級 PB_VERSION 時必須一起更換，否則 build 會失敗
-ADD --checksum=sha256:8d81b6b79add0e219373e922ebe1dddbee7f57fcff602e3585e0d2c654b983ce \
+# checksum 取自 v0.40.4 release 的 checksums.txt。升級 PB_VERSION 時必須一起更換，否則 build 會失敗
+ADD --checksum=sha256:9042ec818570e79c3628dadcd0a756c1496d9e1173918ec409d133c02f82e5fa \
     https://github.com/pocketbase/pocketbase/releases/download/v${PB_VERSION}/pocketbase_${PB_VERSION}_linux_amd64.zip /tmp/pb.zip
 RUN unzip /tmp/pb.zip -d /pb/ && rm /tmp/pb.zip
 COPY --from=web /app/dist /pb/pb_public

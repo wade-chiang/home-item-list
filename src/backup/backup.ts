@@ -90,7 +90,10 @@ export async function restoreBackup(
         // parseBackupManifest 已檢查過，走到這裡代表程式有錯
         throw new Error(`缺少照片檔 ${path}`);
       }
-      return new Blob([new Uint8Array(bytes)], { type: "image/jpeg" });
+      // 包成有檔名的 File：PocketBase 以這個名字當檔名前綴，沒給的話會變成 blob_….jpg（同 repo 的 downloadPhoto）
+      return new File([new Uint8Array(bytes)], "photo.jpg", {
+        type: "image/jpeg",
+      });
     });
 
   const { data } = manifest;

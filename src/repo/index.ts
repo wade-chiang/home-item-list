@@ -691,11 +691,18 @@ export class BackupTooLargeError extends Error {
 const BATCH_MAX_REQUESTS = 1000;
 
 /**
- * 用備份取代全部資料（P2-13）。清空與寫回放在同一個 batch，是單一交易：任一步失敗，資料完全不變（P2-13 確認）。
+ * 用備份取代全部資料（P2-13）。覆蓋與刪除放在同一個 batch，是單一交易：任一步失敗，資料完全不變（P2-13 確認）。
  *
- * - 順序：刪物品（更換紀錄連帶刪除）→ 刪採購、位置、類別 → 建位置、類別、採購 → 建物品（帶照片）→ 建更換紀錄（帶照片）→ 設定
+ * **目前已有的 id 一律用更新，不刪了重建**（2026-09-15 照片遺失後改）：PocketBase 刪除紀錄後，
+ * 會在交易完成時另開背景工作清掉整個 `storage/<collection>/<紀錄 id>/`（v0.40.3 `core/db.go`、`core/base.go`），
+ * 同一個 batch 裡用同一個 id 建回來時上傳的照片也在那個資料夾裡，會跟著被清掉。
+ * 更新時把 `photos` 整組換成備份裡的照片，舊照片由 PocketBase 依檔名刪除，不會清整個資料夾。
+ *
+ * - 順序：位置、類別、採購 → 物品（帶照片）→ 更換紀錄（帶照片）→ 設定 → 刪除備份裡沒有的紀錄。
+ *   刪除放最後：到那時物品與更換紀錄都已指向備份裡的位置、類別與採購，刪除不會被關聯擋下
  * - 照片檔名會變成新的，內容相同
- * - 更換紀錄的建立時間（autodate）無法寫入，會變成還原當下；照原本的建立順序由舊到新送出，同一天多筆的先後不保證（同 restoreItemWithLogs）
+ * - 新建的更換紀錄，建立時間（autodate）無法寫入，會變成還原當下；照原本的建立順序由舊到新送出，同一天多筆的先後不保證（同 restoreItemWithLogs）。
+ *   用更新的更換紀錄保留目前的建立時間
  * - 交易逾時由 migration 1789450000 調成 30 秒
  */
 export async function replaceAllData(
@@ -706,17 +713,38 @@ export async function replaceAllData(
   },
 ): Promise<void> {
   const current = await loadAllData();
+  const notIn = <T extends { id: string }>(
+    records: readonly T[],
+    keep: readonly { id: string }[],
+  ) => {
+    const keepIds = new Set(keep.map((record) => record.id));
+    return records.filter((record) => !keepIds.has(record.id));
+  };
+  const existing = (records: readonly { id: string }[]) =>
+    new Set(records.map((record) => record.id));
+
+  const itemsToDelete = notIn(current.items, data.items);
+  const keptItemIds = existing(data.items);
+  // 物品被刪時它的更換紀錄會連帶刪除，只有留下的物品底下、備份裡沒有的更換紀錄要自己刪
+  const logsToDelete = notIn(current.logs, data.logs).filter((log) =>
+    keptItemIds.has(log.itemId),
+  );
+  const purchasesToDelete = notIn(current.purchases, data.purchases);
+  const locationsToDelete = notIn(current.locations, data.locations);
+  const categoriesToDelete = notIn(current.categories, data.categories);
+
   const requestCount =
-    current.items.length +
-    current.purchases.length +
-    current.locations.length +
-    current.categories.length +
     data.locations.length +
     data.categories.length +
     data.purchases.length +
     data.items.length +
     data.logs.length +
-    1;
+    1 +
+    logsToDelete.length +
+    itemsToDelete.length +
+    purchasesToDelete.length +
+    locationsToDelete.length +
+    categoriesToDelete.length;
   if (requestCount > BATCH_MAX_REQUESTS) {
     throw new BackupTooLargeError(requestCount);
   }
@@ -725,47 +753,76 @@ export async function replaceAllData(
     .collection("settings")
     .getFirstListItem(pb.filter("key = {:key}", { key: "defaultLeadDays" }));
 
-  const batch = pb.createBatch();
-  for (const item of current.items) {
-    batch.collection("items").delete(item.id);
-  }
-  for (const purchase of current.purchases) {
-    batch.collection("purchases").delete(purchase.id);
-  }
-  for (const location of current.locations) {
-    batch.collection("locations").delete(location.id);
-  }
-  for (const category of current.categories) {
-    batch.collection("categories").delete(category.id);
-  }
+  const currentLocationIds = existing(current.locations);
+  const currentCategoryIds = existing(current.categories);
+  const currentPurchaseIds = existing(current.purchases);
+  const currentItemIds = existing(current.items);
+  const currentLogIds = existing(current.logs);
 
+  const batch = pb.createBatch();
   for (const { id, name, icon, sortOrder } of data.locations) {
-    batch.collection("locations").create({ id, name, icon, sortOrder });
+    if (currentLocationIds.has(id)) {
+      batch.collection("locations").update(id, { name, icon, sortOrder });
+    } else {
+      batch.collection("locations").create({ id, name, icon, sortOrder });
+    }
   }
   for (const { id, name, icon, sortOrder } of data.categories) {
-    batch.collection("categories").create({ id, name, icon, sortOrder });
+    if (currentCategoryIds.has(id)) {
+      batch.collection("categories").update(id, { name, icon, sortOrder });
+    } else {
+      batch.collection("categories").create({ id, name, icon, sortOrder });
+    }
   }
   for (const purchase of data.purchases) {
-    batch.collection("purchases").create(toPurchaseRecord(purchase));
+    const { id, ...body } = toPurchaseRecord(purchase);
+    if (currentPurchaseIds.has(id)) {
+      batch.collection("purchases").update(id, body);
+    } else {
+      batch.collection("purchases").create({ id, ...body });
+    }
   }
   for (const item of data.items) {
-    batch.collection("items").create({
-      ...toItemRecord(item),
-      photos: [...(photos.items.get(item.id) ?? [])],
-    });
+    const { id, ...body } = toItemRecord(item);
+    // 更新時也帶 photos：整組換成備份裡的照片，沒照片時是空陣列，目前的照片會被刪掉
+    const itemPhotos = [...(photos.items.get(item.id) ?? [])];
+    if (currentItemIds.has(id)) {
+      batch.collection("items").update(id, { ...body, photos: itemPhotos });
+    } else {
+      batch.collection("items").create({ id, ...body, photos: itemPhotos });
+    }
   }
   const oldestFirst = data.logs.toSorted((a, b) =>
     a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0,
   );
   for (const log of oldestFirst) {
-    batch.collection("logs").create({
-      ...toLogRecord(log),
-      photos: [...(photos.logs.get(log.id) ?? [])],
-    });
+    const { id, ...body } = toLogRecord(log);
+    const logPhotos = [...(photos.logs.get(log.id) ?? [])];
+    if (currentLogIds.has(id)) {
+      batch.collection("logs").update(id, { ...body, photos: logPhotos });
+    } else {
+      batch.collection("logs").create({ id, ...body, photos: logPhotos });
+    }
   }
   batch
     .collection("settings")
     .update(settingsRow.id, { value: String(data.settings.defaultLeadDays) });
+
+  for (const log of logsToDelete) {
+    batch.collection("logs").delete(log.id);
+  }
+  for (const item of itemsToDelete) {
+    batch.collection("items").delete(item.id);
+  }
+  for (const purchase of purchasesToDelete) {
+    batch.collection("purchases").delete(purchase.id);
+  }
+  for (const location of locationsToDelete) {
+    batch.collection("locations").delete(location.id);
+  }
+  for (const category of categoriesToDelete) {
+    batch.collection("categories").delete(category.id);
+  }
 
   await batch.send();
 }

@@ -240,7 +240,15 @@ v0.40.3 原始碼確認：rule 為 `null` 時只有管理員能存取（其他�
 - **batch API 預設關閉**（v0.40.3 原始碼 `Batch.Enabled: false`）。「新增物品同時寫入第一筆更換紀錄」需要在同一個交易完成，所以由 migration 開啟。batch 內的請求拿不到前一個請求建立的 id，物品 id 由前端先產生（15 個 `[a-z0-9]` 字元），更換紀錄才能引用它
 - **JS SDK 會自動取消重複的請求**：同一個方法＋路徑還在等回應時，前一個會被取消並丟出錯誤。`listLogs` 與 `listLogsByItem` 打的是同一個路徑，同時發出就會互相取消，所以 `src/repo/client.ts` 關掉這個功能
 - **batch 一次最多 50 個請求（v0.40.3 預設）**：刪除物品後的「復原」要把物品和所有更換紀錄放在同一個 batch 寫回，由 migration 調成 1000，也就是更換紀錄 999 筆以內可以復原（2026-09-13 以 999 筆實測，沒有超過 3 秒的交易逾時）。這個限制只存在 PocketBase 期間，P3 換成裝置 SQLite 後改用本機交易，沒有這個上限
-- **batch 交易逾時 3 秒**（v0.40.3 預設）：還原備份要在同一個 batch 清空並寫回全部資料與照片，由 migration 調成 30 秒
+- **batch 交易逾時 3 秒**（v0.40.3 預設）：還原備份要在同一個 batch 覆蓋全部資料與照片，由 migration 調成 30 秒
+
+### 同一個 batch 裡不要刪掉紀錄再用同一個 id 建回來
+
+PocketBase 刪除有檔案欄位的紀錄後，會在**交易完成時另開背景工作清掉整個 `storage/<collection>/<紀錄 id>/`**（v0.40.3 原始碼 `core/db.go` 的 `OnComplete`、`core/base.go` 的 `__pbFilesManagerDelete__`）。同一個 batch 裡用同一個 id 建回來時，新照片在交易完成前就上傳到那個資料夾，會跟著被清掉：紀錄還記得檔名，檔案 404。
+
+2026-09-15 還原備份就這樣丟了物品照片（P2-13 原本的寫法是先刪全部再建回來）。改成：目前已有的 id 用更新，`photos` 整組換成備份裡的照片；PocketBase 更新時只依檔名刪掉舊照片，不會清整個資料夾（`src/repo/index.ts` 的 `replaceAllData`）。
+
+刪除與復原分成兩次請求（刪物品後按「復原」）時沒遇到這個問題：背景清理在刪除那次請求完成後就開始，按復原至少隔了幾秒。沒有實測過兩次請求緊接著送出的情況。
 
 ### 每個物品至少一筆更換紀錄
 
@@ -297,7 +305,27 @@ cp -a pb_data <備份位置>/pb_data-$(date +%F-%H%M)
 docker compose start
 ```
 
-還原（未實測）：`docker compose stop`，把 `pb_data` 換成備份，再 `docker compose start`。
+還原（未實測）：先把現有的 `pb_data` 改名移開，再複製備份。目標資料夾已經存在時，`cp` 會把備份複製成它底下的子資料夾，PocketBase 仍用原本的資料，還原沒有生效。
+
+```sh
+docker compose stop
+mv pb_data pb_data-replaced-$(date +%F-%H%M)
+cp -a <備份位置>/pb_data-XXXX pb_data
+docker compose start
+```
+
+### 升級 PocketBase
+
+版本號與 checksum 要一起改：只改一個，build 會因 checksum 不符而失敗，跑著的仍是舊版（2026-09-15 升 v0.40.4 時一度只改了 checksum）。
+
+1. 看新版 release notes 有沒有破壞性變更
+2. 備份 `pb_data`（見上方「備份 `pb_data`」）
+3. 改 `Dockerfile` 的 `PB_VERSION` 與 checksum（取自該版 release 的 `checksums.txt`），兩個一起改
+4. `docker compose up -d --build`，確認 build 沒失敗
+5. `docker compose exec pocketbase /pb/pocketbase --version` 確認是新版本
+6. 實測主要功能
+
+回滾：`docker compose stop` → `Dockerfile` 改回 → `pb_data` 換回備份（見上方還原步驟）→ `docker compose up -d --build`
 
 ### commit
 
@@ -309,7 +337,7 @@ docker compose start
 
 | 決定 | 理由 |
 |---|---|
-| **PocketBase（暫定；P1-21 檢核後續用，P2 結束前再檢核）** | 這個專案的後端終將消失（P3 全部搬上裝置），所以「寫最少的鷹架」比「後端寫得漂亮」重要。PocketBase 讓後端程式碼接近零，還內建檔案上傳、on-demand 縮圖、admin 後台與備份 API |
+| **PocketBase（暫定；P1-21、P2-14 檢核後續用，P3-7 決定去留）** | 這個專案的後端終將消失（P3 全部搬上裝置），所以「寫最少的鷹架」比「後端寫得漂亮」重要。PocketBase 讓後端程式碼接近零，還內建檔案上傳、on-demand 縮圖、admin 後台與備份 API |
 | **P3 不把 PocketBase 包進 app，改用裝置上的 SQLite** | 技術上可行（社群用 gomobile 編成 Android/iOS 套件，在 app 內跑一個 localhost 伺服器），但官方不支援；唯一的社群專案 pocketbase_mobile 停在 v0.24.4，2025-01 後沒更新（官方已到 v0.40.3）；Capacitor 沒有現成外掛，要自己寫 Kotlin／Swift 包裝。為了省下 P3 重寫 `src/repo/` 的成本，換來一個卡在舊版、要自己維護的原生依賴，不划算。2026-09-11 查證 |
 | **P1、P2 維持 PocketBase 網頁版，不從 P1 就做 Capacitor app** | 2026-09-11 評估過「P1 直接做 app、資料存裝置上的 SQLite」：可省掉 PocketBase、Docker、P3 的 `src/repo/` 重寫與資料搬遷；代價是 P1 就要架 Android 建置環境、沒有 admin 後台與現成縮圖。已知 PocketBase 的照片與備份功能到 P3 仍要在 app 內重做。維持現規劃的理由：想最快開始用，網頁版從骨架到手機能用的路徑最短；Android 建置（SDK、打包、安裝）的成本留到 P3 再付 |
 | **SQLite，不是 Postgres** | 單人使用沒有併發問題；備份就是複製一個目錄；資料結構直接就是未來 app 版要用的結構 |
@@ -353,6 +381,15 @@ docker compose start
 4. 查詢：P1 的讀寫都用 REST API ＋ JS SDK 完成，沒寫 pb_hooks；最接近的是「只剩一筆不能刪」只能先查再刪，單人使用可以接受
 
 當初選 PocketBase 的主要理由（檔案上傳、on-demand 縮圖、備份）在 P1 都還沒用到，要到 P2 才會兌現或落空。
+
+**P2-14 檢核結果（2026-09-15）：四項都未觸發，續用到 P3，去留由 P3-7 決定。**
+
+1. 權限：P2-13 碰到備份 API 需要超級管理員登入，改成 app 自己匯出與還原繞過；其他功能沒被擋
+2. 型別：`photos`、`purchases` 接上後沒有型別不一致的 bug。踩到的是欄位行為：更新時帶 `photos` 會刪掉沒列到的檔案，已寫進「型別要自己顧」；同一個 batch 刪掉再用同一個 id 建回來會丟照片，還原備份因此丟過一次物品照片，見「同一個 batch 裡不要刪掉紀錄再用同一個 id 建回來」
+3. 升級：2026-09-15 從 v0.40.3 升到 v0.40.4（修補版），只改 Dockerfile 的版本與 checksum，app 程式不用改，實測正常。跨小版本（例如 0.41）的升級還沒走過
+4. 查詢：沒寫 pb_hooks。前端先查再做、不是原子操作的有「只剩一筆不能刪」與「採購紀錄沒人指向才刪」；autodate 建立時間不能寫入，還原後同一天多筆的先後不保證。batch 可以帶檔案，新增連照片、還原全部資料都做成單一交易
+
+三個理由：檔案上傳**兌現**（不寫上傳 API、張數與格式由欄位把關）；on-demand 縮圖**兌現**（預設 100x100，不用改 migration）；備份**部分落空**（前端用不了備份 API，匯出與還原自己做；伺服器排程備份由 migration 設定）。
 
 **退場成本** —— 換回自建後端（Hono + Prisma + SQLite）需要：重寫 `src/repo/`、建後端專案、做一次性資料搬遷。
 
