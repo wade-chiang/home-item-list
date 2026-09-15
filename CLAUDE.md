@@ -3,7 +3,7 @@
 家庭耗材更換提醒器。記錄每樣耗材「上次什麼時候換的」「多久該換一次」，到期前提醒。
 單人自用，跑在家裡的機器上；未來以 Capacitor 包成手機 app。
 
-詳細產品規格見 [docs/PRODUCT.md](docs/PRODUCT.md)，開發進度與 task 見 [docs/TASKS.md](docs/TASKS.md)，確認過的畫面見 [docs/prototype/p0.html](docs/prototype/p0.html)。
+詳細產品規格見 [docs/PRODUCT.md](docs/PRODUCT.md)，開發進度與 task 見 [docs/TASKS.md](docs/TASKS.md)，確認過的畫面見 [docs/prototype/p0.html](docs/prototype/p0.html)、[docs/prototype/p3.html](docs/prototype/p3.html)。
 
 ---
 
@@ -101,6 +101,7 @@ pb_public/           前端 build 產物（不進 git）
 pb_data/             PocketBase 資料與照片（volume，不進 git）
 docs/
   prototype/p0.html  P0 確認過的原型
+  prototype/p3.html  P3 確認過的原型
 ```
 
 ---

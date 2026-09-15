@@ -155,7 +155,7 @@
 - [ ] **P3-2** `src/repo/` 從 PocketBase SDK 換成裝置上的 SQLite（`@capacitor-community/sqlite`）
 - [ ] **P3-3** 相機外掛接上照片功能，照片改存裝置檔案系統
   - 加回「拍照」。網頁版 `capture` 在 P2-3 實測會遺失照片，P2 只能從相簿選
-- [ ] **P3-4** 本地通知：每天排程檢查到期項目並發出通知
+- [ ] **P3-4** 本地通知：依到期日預先排好通知，打開 app 與資料變動時重排（外掛不會在背景檢查）
 - [ ] **P3-5** 通知點擊直接進入該物品
 - [ ] **P3-6** 從 PocketBase 匯出、匯入到 app
   - 沿用 P2-13 的備份檔格式；存檔改用 Capacitor 外掛（`<a download>` 在 WebView 裡預設沒反應，要實測），只換 `src/backup/saveFile.ts`
