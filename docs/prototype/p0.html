@@ -256,7 +256,8 @@ const BADGE = {overdue:'bg-overdue-soft text-overdue', soon:'bg-soon-soft text-s
 /* ================= 狀態 ================= */
 const settings = {defaultLead:7};
 // showPrice 固定為 true：使用者決定保留價格記錄（規格草稿 #13），原型選單的開關已拿掉
-const view = {screen:'home', back:'home', detailId:'lr-ac', itemIcons:true, showPrice:true, homeFilter:null, theme:'system'};
+const view = {screen:'home', back:'home', detailId:'lr-ac', itemIcons:true, showPrice:true, homeFilter:null, theme:'system',
+  lightPal:'current', darkPal:'current'};
 const PRE = [30,60,90,180,365];
 let F = freshForm();
 function freshForm(){
@@ -866,6 +867,12 @@ function openProto(){
     <p class="mt-1 text-[13px] text-ink-3">P0 專用，正式版不會有這個選單。</p>
     ${sectDiv('主題')}
     ${themeSeg()}
+    ${sectDiv('配色（比較用）')}
+    <p class="-mt-1 text-[12px] leading-relaxed text-ink-3">淺色、深色分開挑。點一組會同時切到對應的主題，直接看到效果；色塊依序是底色、卡片、主色、逾期、即將到期。</p>
+    <div class="mt-3 text-[13px] font-medium text-ink-2">淺色</div>
+    ${palRows('light')}
+    <div class="mt-4 text-[13px] font-medium text-ink-2">深色</div>
+    ${palRows('dark')}
     ${sectDiv('跳到畫面')}
     <div class="flex flex-col gap-2">
       ${screens.map((sc,i)=>`<button data-scr="${i}" class="flex w-full items-center gap-3 rounded-xl border border-line px-3.5 py-3 text-left">
@@ -880,6 +887,13 @@ function openProto(){
     if(t===scrim || t.closest('[data-close]')) return close();
     const g = t.closest('[data-tog]'); if(g){ view[g.dataset.tog] = !view[g.dataset.tog]; draw(); render(); return; }
     const th = t.closest('[data-theme-set]'); if(th){ setTheme(th.dataset.themeSet); draw(); render(); return; }
+    const pal = t.closest('[data-pal]');
+    if(pal){
+      const [kind, id] = pal.dataset.pal.split(':');
+      view[kind+'Pal'] = id;
+      // 切到對應主題：在淺色系統下點深色配色，才看得到效果
+      setTheme(kind); applyPalette(); draw(); render(); return;
+    }
     const sc = t.closest('[data-scr]');
     if(sc){
       const v = screens[+sc.dataset.scr][1];
@@ -1266,6 +1280,90 @@ function openLogEdit(itemId, idx){
   });
 }
 
+/* ================= 配色候選（2026-09-15 比較用，還沒選定） =================
+   每組是完整的一套 token，「現行」就是上方 <style> 裡的值。淺色、深色分開挑。
+   主色避開紅、黃、橘：那是逾期與即將到期的狀態色，太接近會分不清按鈕和警示。
+   狀態色維持同一色系，每組各自調深淺，確保當文字用時讀得清楚 */
+const DARK_SHADOW = {shadow:'0 1px 2px rgba(0,0,0,.4), 0 6px 16px rgba(0,0,0,.3)', scrim:'rgba(0,0,0,.55)'};
+const PALETTES = {
+  light: [
+    {id:'current', name:'現行', desc:'暖米白底、深青主色', v:{
+      ground:'#F6F3EE', surface:'#FFFDF9', 'surface-2':'#FBF8F3', ink:'#2B2520', 'ink-2':'#5F564F', 'ink-3':'#857B72',
+      line:'#E6DFD6', 'line-2':'#EFEAE3', accent:'#0B5750', 'accent-ink':'#FFFFFF', 'accent-soft':'#E2EDE8',
+      overdue:'#B23A2E', 'overdue-soft':'#F7E4DF', soon:'#8A5A0B', 'soon-soft':'#F5E8D0', paused:'#A0968D',
+      shadow:'0 1px 2px rgba(43,37,32,.06), 0 6px 16px rgba(43,37,32,.05)', scrim:'rgba(30,24,18,.45)'}},
+    {id:'paper', name:'紙白墨藍', desc:'冷調灰白底、墨藍主色，像文件與工具', v:{
+      ground:'#F4F5F7', surface:'#FFFFFF', 'surface-2':'#F9FAFB', ink:'#1C2330', 'ink-2':'#4A5363', 'ink-3':'#737C8A',
+      line:'#DDE1E7', 'line-2':'#EBEEF2', accent:'#1F4A7A', 'accent-ink':'#FFFFFF', 'accent-soft':'#E3EBF4',
+      overdue:'#B42F2A', 'overdue-soft':'#F8E3E1', soon:'#8A5B00', 'soon-soft':'#F6EACF', paused:'#9AA1AC',
+      shadow:'0 1px 2px rgba(28,35,48,.06), 0 6px 16px rgba(28,35,48,.05)', scrim:'rgba(20,26,36,.45)'}},
+    {id:'mint', name:'薄荷濾網', desc:'淡綠灰底、森林綠主色，呼應濾網與淨水', v:{
+      ground:'#F1F5F2', surface:'#FBFDFB', 'surface-2':'#F6FAF7', ink:'#1F2A24', 'ink-2':'#4B5A51', 'ink-3':'#6F7E75',
+      line:'#D8E2DB', 'line-2':'#E7EEE9', accent:'#2F6B45', 'accent-ink':'#FFFFFF', 'accent-soft':'#DDEBE1',
+      overdue:'#B23A2E', 'overdue-soft':'#F6E3DE', soon:'#86590C', 'soon-soft':'#F3E7CF', paused:'#97A39B',
+      shadow:'0 1px 2px rgba(31,42,36,.06), 0 6px 16px rgba(31,42,36,.05)', scrim:'rgba(22,32,26,.45)'}},
+    {id:'mono', name:'純白高對比', desc:'白底、近黑主色，靠狀態色撐出重點', v:{
+      ground:'#FFFFFF', surface:'#FFFFFF', 'surface-2':'#F7F7F7', ink:'#111111', 'ink-2':'#444444', 'ink-3':'#6B6B6B',
+      line:'#E2E2E2', 'line-2':'#EFEFEF', accent:'#111111', 'accent-ink':'#FFFFFF', 'accent-soft':'#EDEDED',
+      overdue:'#C0271C', 'overdue-soft':'#FCE6E4', soon:'#946000', 'soon-soft':'#FBEFD6', paused:'#9A9A9A',
+      // 底色與卡片同為白色，卡片只靠陰影分開，所以陰影比其他組深一點
+      shadow:'0 1px 2px rgba(0,0,0,.08), 0 4px 14px rgba(0,0,0,.07)', scrim:'rgba(0,0,0,.45)'}},
+    {id:'slate', name:'石板藍灰', desc:'藍灰底、靛藍主色，比現行冷、比紙白柔和', v:{
+      ground:'#EEF1F5', surface:'#FAFBFD', 'surface-2':'#F3F6F9', ink:'#1E2533', 'ink-2':'#4D5668', 'ink-3':'#6E7789',
+      line:'#D5DBE4', 'line-2':'#E4E8EF', accent:'#3B4FA0', 'accent-ink':'#FFFFFF', 'accent-soft':'#E1E5F4',
+      overdue:'#B3372F', 'overdue-soft':'#F5E1DF', soon:'#87590A', 'soon-soft':'#F2E6CE', paused:'#959DAB',
+      shadow:'0 1px 2px rgba(30,37,51,.06), 0 6px 16px rgba(30,37,51,.05)', scrim:'rgba(20,26,38,.45)'}},
+  ],
+  dark: [
+    {id:'current', name:'現行', desc:'墨綠黑底、青綠主色（v1 已確認）', v:{
+      ground:'#0E1412', surface:'#18201D', 'surface-2':'#1E2724', ink:'#E8ECE9', 'ink-2':'#AFBBB7', 'ink-3':'#85938E',
+      line:'#2A3430', 'line-2':'#222B28', accent:'#43B3A6', 'accent-ink':'#08201D', 'accent-soft':'#12312D',
+      overdue:'#F2705F', 'overdue-soft':'#3A1F1B', soon:'#D9A33A', 'soon-soft':'#332715', paused:'#6E7B77', ...DARK_SHADOW}},
+    {id:'charcoal', name:'中性炭灰', desc:'不帶色偏的深灰、天藍主色', v:{
+      ground:'#121212', surface:'#1C1C1E', 'surface-2':'#232326', ink:'#ECECEC', 'ink-2':'#B4B4B8', 'ink-3':'#8C8C92',
+      line:'#2E2E32', 'line-2':'#262629', accent:'#5AAEF0', 'accent-ink':'#07203A', 'accent-soft':'#16293A',
+      overdue:'#F27062', 'overdue-soft':'#3A1E1B', soon:'#E0A93F', 'soon-soft':'#33281A', paused:'#75757C', ...DARK_SHADOW}},
+    {id:'oled', name:'OLED 純黑', desc:'純黑底、薄荷主色，對比最高', v:{
+      ground:'#000000', surface:'#111413', 'surface-2':'#171B1A', ink:'#E9EEEC', 'ink-2':'#AAB5B1', 'ink-3':'#808B87',
+      line:'#262B29', 'line-2':'#1C201F', accent:'#5FD3B3', 'accent-ink':'#032018', 'accent-soft':'#0F2E26',
+      overdue:'#FF7566', 'overdue-soft':'#2E1512', soon:'#E8B04A', 'soon-soft':'#2C2210', paused:'#6B7572', ...DARK_SHADOW}},
+    {id:'deepsea', name:'深海藍', desc:'深藍黑底、淡青藍主色', v:{
+      ground:'#0B1220', surface:'#131C2E', 'surface-2':'#1A2438', ink:'#E6ECF5', 'ink-2':'#A9B6CA', 'ink-3':'#8292A9',
+      line:'#26324A', 'line-2':'#1E2940', accent:'#6CC4E8', 'accent-ink':'#06202C', 'accent-soft':'#14304A',
+      overdue:'#F47A6C', 'overdue-soft':'#3A1E22', soon:'#E3AE4C', 'soon-soft':'#33291A', paused:'#6F7D93', ...DARK_SHADOW}},
+    {id:'warm', name:'暖炭', desc:'帶暖色的深灰、鼠尾草綠主色，跟現行淺色的暖調搭', v:{
+      ground:'#151311', surface:'#1F1C19', 'surface-2':'#26221F', ink:'#EDE7E1', 'ink-2':'#BDB3A9', 'ink-3':'#928880',
+      line:'#332E2A', 'line-2':'#2A2623', accent:'#8FBF9A', 'accent-ink':'#102015', 'accent-soft':'#243328',
+      overdue:'#EF7361', 'overdue-soft':'#3B201B', soon:'#DCA640', 'soon-soft':'#342816', paused:'#7B726B', ...DARK_SHADOW}},
+  ],
+};
+/* 把選到的配色寫成一段 <style>。選擇器沿用上方的三種狀態（淺色、跟隨系統的深色、手動深色），
+   前面多加 html 提高 specificity，不靠順序蓋過固定樣式。
+   原因：發布成 artifact 時整份內容被包進 <body>，固定樣式排在 <head> 之後，
+   第一版把這段放進 <head>、只靠順序，結果被固定樣式蓋回去，換配色沒有反應（2026-09-15 手機實測） */
+function applyPalette(){
+  const vars = v=>Object.entries(v).map(([k,x])=>`--${k}:${x};`).join('');
+  const L = PALETTES.light.find(p=>p.id===view.lightPal).v;
+  const D = vars(PALETTES.dark.find(p=>p.id===view.darkPal).v);
+  let el = $('palette');
+  if(!el){ el = document.createElement('style'); el.id = 'palette'; document.body.appendChild(el); }
+  el.textContent = `html:root{${vars(L)}}
+@media (prefers-color-scheme: dark){html:root:not([data-theme="light"]){${D}}}
+html:root[data-theme="dark"]{${D}}`;
+}
+function palRows(kind){
+  return `<div class="mt-1.5 flex flex-col gap-2">${PALETTES[kind].map(p=>{
+    const on = view[kind+'Pal']===p.id, v = p.v;
+    return `<button data-pal="${kind}:${p.id}" aria-pressed="${on}" class="flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left ${on?'border-accent':'border-line'}">
+      <span class="flex shrink-0 overflow-hidden rounded-lg border" style="border-color:${v.line}">
+        ${[v.ground, v.surface, v.accent, v.overdue, v.soon].map(c=>`<span class="block h-8 w-4" style="background:${c}"></span>`).join('')}
+      </span>
+      <span class="min-w-0 flex-1"><span class="block text-[14.5px] ${on?'font-medium':''}">${p.name}</span><span class="block text-[12px] text-ink-3">${p.desc}</span></span>
+      ${on?`<span class="text-accent">${ic('check',18,2.25)}</span>`:''}
+    </button>`;
+  }).join('')}</div>`;
+}
+
 /* ================= 繪製與導航 ================= */
 function setTheme(k){
   view.theme = k;
@@ -1389,5 +1487,6 @@ document.querySelector('[data-tab="home"]').innerHTML = `${ic('home',21)}首頁`
 document.querySelector('[data-tab="items"]').innerHTML = `${ic('list',21)}物品`;
 document.querySelector('[data-tab="settings"]').innerHTML = `${ic('gear',21)}設定`;
 hydrateIcons(document);
+applyPalette();
 render();
 </script>
