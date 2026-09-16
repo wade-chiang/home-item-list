@@ -243,7 +243,7 @@ function EditItemForm({
         <p className={LABEL_CLASS}>
           物品照片{" "}
           <span className="font-normal text-ink-3">
-            機身、型號貼紙 · 最多 5 張
+            機身、型號貼紙、濾網裝在哪，之後買耗材時用得到
           </span>
         </p>
         {/* 照片立刻上傳與刪除，不等按儲存（見 PhotoField） */}

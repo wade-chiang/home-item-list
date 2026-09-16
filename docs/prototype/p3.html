@@ -547,7 +547,7 @@ function renderDetail(){
   h += `<div class="mt-3 rounded-2xl bg-surface px-4 py-3.5 shadow-card">
     <div class="flex items-baseline justify-between gap-3">
       <h3 class="nowrap text-[13px] font-semibold text-ink-2">物品照片</h3>
-      <span class="text-[11.5px] text-ink-3">機身、型號貼紙 · 最多 5 張</span>
+      <span class="text-[11.5px] text-ink-3">機身、型號貼紙、濾網裝在哪 · 最多 5 張</span>
     </div>
     <div class="mt-2.5 flex flex-wrap gap-2">
       ${Array.from({length:it.photos},()=>`<button data-photo-view="${it.id}" aria-label="檢視照片" class="grid h-16 w-16 place-items-center rounded-xl border border-line bg-line-2 text-ink-3">${ic('image',20)}</button>`).join('')}
@@ -676,7 +676,7 @@ function renderAdd(){
     <textarea data-f="note" rows="3" placeholder="安裝位置、機身型號等注意事項…" class="${INP} leading-relaxed">${esc(F.note)}</textarea>
   </div>
 
-  <div class="mt-4"><label class="${LBL}">物品照片 <span class="font-normal text-ink-3">機身、型號貼紙、濾網裝在哪</span></label>
+  <div class="mt-4"><label class="${LBL}">物品照片 <span class="font-normal text-ink-3">機身、型號貼紙、濾網裝在哪，之後買耗材時用得到</span></label>
     <div class="flex flex-wrap gap-2">
       ${Array.from({length:F.itemPhotos},()=>`<button data-fphoto-view aria-label="檢視照片" class="grid h-16 w-16 place-items-center rounded-xl border border-line bg-line-2 text-ink-3">${ic('image',20)}</button>`).join('')}
       ${F.itemPhotos<5?`<button data-fphoto-add aria-label="新增照片" class="grid h-16 w-16 place-items-center rounded-xl border border-dashed border-line bg-surface text-ink-3">${ic('plus',20)}</button>`:''}
@@ -1322,7 +1322,7 @@ function renderEdit(){
     </div></div>
   <div class="mt-4"><label class="${LBL}">備註</label>
     <textarea data-e="note" rows="3" placeholder="安裝位置、機身型號等注意事項…" class="${INP} leading-relaxed">${esc(E.note)}</textarea></div>
-  <div class="mt-4"><label class="${LBL}">物品照片 <span class="font-normal text-ink-3">機身、型號貼紙 · 最多 5 張</span></label>
+  <div class="mt-4"><label class="${LBL}">物品照片 <span class="font-normal text-ink-3">機身、型號貼紙、濾網裝在哪，之後買耗材時用得到</span></label>
     <div class="flex flex-wrap gap-2">
       ${Array.from({length:it.photos},()=>`<button data-photo-view="${it.id}" aria-label="檢視照片" class="grid h-16 w-16 place-items-center rounded-xl border border-line bg-line-2 text-ink-3">${ic('image',20)}</button>`).join('')}
       ${it.photos<5?`<button data-photo-add="${it.id}" aria-label="新增照片" class="grid h-16 w-16 place-items-center rounded-xl border border-dashed border-line bg-surface text-ink-3">${ic('plus',20)}</button>`:''}

@@ -1,0 +1,844 @@
+<title>換了沒 專案簡報</title>
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap"
+/>
+<style>
+  /* 配色沿用 app 的預設：淺色石板藍灰、深色深海藍（P2-15 選定，值同 src/index.css） */
+  :root {
+    --ground: #eef1f5;
+    --surface: #fafbfd;
+    --surface-2: #f3f6f9;
+    --ink: #1e2533;
+    --ink-2: #4d5668;
+    --ink-3: #6e7789;
+    --line: #d5dbe4;
+    --line-2: #e4e8ef;
+    --accent: #3b4fa0;
+    --accent-ink: #ffffff;
+    --accent-soft: #e1e5f4;
+    --overdue: #b3372f;
+    --overdue-soft: #f5e1df;
+    --soon: #87590a;
+    --soon-soft: #f2e6ce;
+    --shadow: 0 1px 2px rgba(30, 37, 51, 0.06), 0 6px 16px rgba(30, 37, 51, 0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0b1220;
+      --surface: #131c2e;
+      --surface-2: #1a2438;
+      --ink: #e6ecf5;
+      --ink-2: #a9b6ca;
+      --ink-3: #8292a9;
+      --line: #26324a;
+      --line-2: #1e2940;
+      --accent: #6cc4e8;
+      --accent-ink: #06202c;
+      --accent-soft: #14304a;
+      --overdue: #f47a6c;
+      --overdue-soft: #3a1e22;
+      --soon: #e3ae4c;
+      --soon-soft: #33291a;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0b1220;
+    --surface: #131c2e;
+    --surface-2: #1a2438;
+    --ink: #e6ecf5;
+    --ink-2: #a9b6ca;
+    --ink-3: #8292a9;
+    --line: #26324a;
+    --line-2: #1e2940;
+    --accent: #6cc4e8;
+    --accent-ink: #06202c;
+    --accent-soft: #14304a;
+    --overdue: #f47a6c;
+    --overdue-soft: #3a1e22;
+    --soon: #e3ae4c;
+    --soon-soft: #33291a;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.3);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family:
+      -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC",
+      "Microsoft JhengHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.7;
+  }
+  .mono {
+    font-family: "DM Mono", ui-monospace, Menlo, "PingFang TC", "Noto Sans TC", monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .deck {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+  .slide {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-block: clamp(20px, 5vh, 56px);
+    padding-inline: max(20px, calc(50vw - 480px));
+  }
+  .slide[hidden] {
+    display: none !important;
+  }
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .eyebrow .num {
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .eyebrow .rule {
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+  h1 {
+    font-size: clamp(30px, 6vw, 52px);
+    line-height: 1.25;
+    margin: 18px 0 0;
+    text-wrap: balance;
+  }
+  h2 {
+    font-size: clamp(22px, 4.2vw, 34px);
+    line-height: 1.3;
+    margin: 12px 0 0;
+    text-wrap: balance;
+  }
+  .lede {
+    margin-top: 14px;
+    font-size: clamp(15px, 2.4vw, 19px);
+    color: var(--ink-2);
+    max-width: 62ch;
+  }
+  ul {
+    margin: 18px 0 0;
+    padding-left: 1.1em;
+    max-width: 68ch;
+  }
+  li {
+    margin-top: 8px;
+    font-size: clamp(14px, 2.2vw, 17px);
+  }
+  li::marker {
+    color: var(--accent);
+  }
+  b,
+  strong {
+    font-weight: 600;
+  }
+  code {
+    font-family: "DM Mono", ui-monospace, Menlo, monospace;
+    font-size: 0.92em;
+    background: var(--surface-2);
+    border: 1px solid var(--line-2);
+    border-radius: 6px;
+    padding: 1px 5px;
+  }
+
+  /* 表格：窄畫面時自己橫向捲動，頁面本身不會左右滑 */
+  .table-wrap {
+    margin-top: 18px;
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 520px;
+    font-size: clamp(13px, 1.9vw, 15.5px);
+  }
+  th,
+  td {
+    text-align: left;
+    padding: 9px 14px;
+    border-top: 1px solid var(--line-2);
+    vertical-align: top;
+  }
+  thead th {
+    border-top: 0;
+    font-size: 12.5px;
+    letter-spacing: 0.04em;
+    color: var(--ink-3);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  td:first-child {
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .table-wrap.wide td:first-child {
+    white-space: normal;
+  }
+
+  .stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 26px;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 10px 16px;
+    box-shadow: var(--shadow);
+  }
+  .stat .n {
+    font-size: clamp(20px, 3.4vw, 26px);
+    font-weight: 500;
+    line-height: 1.1;
+  }
+  .stat .k {
+    font-size: 12px;
+    color: var(--ink-3);
+    margin-top: 4px;
+  }
+
+  .cards {
+    display: grid;
+    gap: 12px;
+    margin-top: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+  }
+  .card h3 {
+    margin: 0;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+    color: var(--accent);
+  }
+  .card p {
+    margin: 6px 0 0;
+    font-size: 14.5px;
+    color: var(--ink-2);
+  }
+
+  /* 一個 task 的生命週期：純 HTML 畫的流程，不依賴任何繪圖套件 */
+  .flow {
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 640px;
+  }
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 9px 14px;
+    font-size: clamp(13.5px, 2vw, 15.5px);
+    box-shadow: var(--shadow);
+  }
+  .step .who {
+    font-size: 11.5px;
+    border-radius: 999px;
+    padding: 2px 8px;
+    white-space: nowrap;
+    margin-top: 3px;
+  }
+  .step.me .who {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .step.ai .who {
+    background: var(--line-2);
+    color: var(--ink-2);
+  }
+  .arrow {
+    color: var(--ink-3);
+    font-size: 13px;
+    padding-left: 22px;
+  }
+  .loop {
+    border-color: var(--soon);
+    color: var(--soon);
+    background: var(--soon-soft);
+  }
+
+  .note {
+    margin-top: 20px;
+    border-left: 3px solid var(--line);
+    padding: 2px 0 2px 14px;
+    color: var(--ink-3);
+    font-size: 14px;
+    max-width: 64ch;
+  }
+  .note b {
+    color: var(--ink-2);
+  }
+  .note[hidden] {
+    display: none;
+  }
+
+  .bad {
+    color: var(--overdue);
+  }
+  .warn {
+    color: var(--soon);
+  }
+
+  /* 底部列：頁碼、進度、操作說明 */
+  .bar {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 8px max(20px, calc(50vw - 480px));
+    border-top: 1px solid var(--line);
+    background: var(--ground);
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+  .bar .track {
+    flex: 1;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--line);
+    overflow: hidden;
+  }
+  .bar .fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.2s ease;
+  }
+  .bar button {
+    font: inherit;
+    color: var(--ink-2);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 3px 9px;
+    cursor: pointer;
+  }
+  .bar button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      transition: none !important;
+    }
+  }
+
+  /* 列印：每一頁一張投影片，講者備註一起印出來 */
+  @media print {
+    .bar {
+      display: none;
+    }
+    .slide {
+      display: flex !important;
+      break-after: page;
+      min-height: 96vh;
+      padding-inline: 0;
+    }
+    .note {
+      display: block !important;
+    }
+    body {
+      background: #fff;
+      color: #111;
+    }
+  }
+</style>
+
+<div class="deck">
+  <main id="slides">
+    <section class="slide">
+      <div class="eyebrow">
+        <span class="mono num">專案簡報</span><span class="rule"></span>
+        <span class="mono">2026-09-16</span>
+      </div>
+      <h1>換了沒？ 家庭耗材管理器</h1>
+      <p class="lede">
+        冷氣濾網、淨水器濾心、防潮盒——「該換了，但沒人記得」。
+        這場講的是技術選擇怎麼決定的，以及跟 Claude Code 的協作流程長什麼樣。
+      </p>
+      <div class="stats mono">
+        <div class="stat"><div class="n">44</div><div class="k">完成的 task</div></div>
+        <div class="stat"><div class="n">9,403</div><div class="k">行前端程式</div></div>
+        <div class="stat"><div class="n">250</div><div class="k">單元測試</div></div>
+      </div>
+      <p class="note">
+        <b>講者備註：</b>按 N 可以開關備註，方向鍵翻頁。這頁快速帶過就好。
+      </p>
+    </section>
+
+    <section class="slide" hidden>
+      <div class="eyebrow">
+        <span class="mono num">01</span><span>專案</span><span class="rule"></span>
+      </div>
+      <h2>到期推算 → 提醒 → 換好了 → 重新推算</h2>
+      <p class="lede">
+        日常最常按的是「換好了」，其他都是想記才記：品牌型號、價格與採購單位、機身與耗材包裝的照片、
+        改這次的週期與提前提醒天數、季節性的暫停、匯出備份。到期日是<b>推導值</b>，不存進資料庫。
+      </p>
+      <div class="cards">
+        <div class="card">
+          <h3>已完成 P1、P2</h3>
+          <p>依位置分組的首頁與篩選、換好了、暫停、照片、價格、實際間隔回饋、匯出與還原、配色</p>
+        </div>
+        <div class="card">
+          <h3>接下來 P3</h3>
+          <p>Capacitor 包成 Android app、資料搬到手機、本地通知（原型已確認）</p>
+        </div>
+        <div class="card">
+          <h3>之後 P4</h3>
+          <p>拍耗材包裝自動填品牌型號、成本統計</p>
+        </div>
+      </div>
+      <p class="note"><b>講者備註：</b>這頁切到 demo 操作一輪「新增物品 → 換好了」。</p>
+    </section>
+
+    <section class="slide" hidden>
+      <div class="eyebrow">
+        <span class="mono num">02</span><span>產品</span><span class="rule"></span>
+      </div>
+      <h2>主要功能</h2>
+      <div class="cards">
+        <div class="card">
+          <h3>首頁</h3>
+          <p>依位置分組，一眼看出哪些逾期、哪些快到期；上方三個數量方塊可以篩選</p>
+        </div>
+        <div class="card">
+          <h3>換好了</h3>
+          <p>一鍵記錄，順手記品牌型號、價格、耗材包裝照片</p>
+        </div>
+        <div class="card">
+          <h3>物品詳情</h3>
+          <p>更換歷史、目前型號與週期、物品照片</p>
+        </div>
+        <div class="card">
+          <h3>暫停</h3>
+          <p>冬天不開的冷氣先暫停，到指定日期自動恢復</p>
+        </div>
+        <div class="card">
+          <h3>設定</h3>
+          <p>位置與類別（icon、排序）、外觀與配色、提前提醒天數</p>
+        </div>
+        <div class="card">
+          <h3>備份</h3>
+          <p>匯出 zip、還原；伺服器每天自動備份</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" hidden>
+      <div class="eyebrow">
+        <span class="mono num">03</span><span>產品</span><span class="rule"></span>
+      </div>
+      <h2>幾個巧思</h2>
+      <ul>
+        <li><b>不用自己取名</b>：顯示名稱由「位置 ＋ 類別 ＋ 補充名稱」組成，例如「主臥 · 冷氣濾網」。同位置同類別出現第二個時，才自動展開補充名稱欄位並提示</li>
+        <li><b>不知道上次什麼時候換</b>：改問「下次大概什麼時候要換」，一樣建立第一筆紀錄，到期日照算，不會卡在必填欄位</li>
+        <li><b>換了不同型號會標出來</b>：歷史上標「型號變更」「週期 90 → 60」。比較前先整理字串，3M 和 ３Ｍ 不會被當成兩種</li>
+        <li><b>逾期的位置暫時置頂</b>：首頁的篩選離開就清除，避免停在「正常」時把逾期的東西藏起來</li>
+        <li><b>幾乎每個動作都能復原</b>：刪物品、刪照片、改日期都有提示條與「復原」；刪照片前會先把原圖下載下來，復原時再傳回去</li>
+      </ul>
+      <p class="note">
+        <b>講者備註：</b>其他沒放上來的：實際間隔只提示不自動改（近三次平均與目前週期差 10 天以上才跳）、暫停一定要填恢復日、採購與更換分開記（一捲濾網換五台冷氣）、照片上傳前壓到長邊 1600 轉 JPEG、「拍耗材包裝」放在表單最上面（拆封時手上正拿著包裝）。
+      </p>
+    </section>
+
+    <section class="slide" hidden>
+      <div class="eyebrow">
+        <span class="mono num">04</span><span>選擇的原則</span><span class="rule"></span>
+      </div>
+      <h2>後端終將消失，所以寫最少的鷹架</h2>
+      <p class="lede">
+        P1、P2 是網頁版：React 前端 ＋ PocketBase，Docker 跑在家裡的機器。
+        P3 之後資料搬進手機，<b>後端整個不見</b>。
+      </p>
+      <div class="cards">
+        <div class="card">
+          <h3>1 · 過渡期的東西不值得雕</h3>
+          <p>網頁版的後端只是過渡，「寫最少的鷹架」比「後端寫得漂亮」重要</p>
+        </div>
+        <div class="card">
+          <h3>2 · 暫定的選擇要有退場保險</h3>
+          <p>資料存取集中在 <code>src/repo/</code>，UI 不碰後端。換資料層時 UI 一行不改</p>
+        </div>
+        <div class="card">
+          <h3>3 · 查證再選</h3>
+          <p>版本相容性、維護狀態、授權都查過，並記下查證日期；舊結論被推翻就更新文件</p>
+        </div>
+        <div class="card">
+          <h3>4 · 每個依賴都要理由</h3>
+          <p>Claude 提理由與版本，我確認後才裝；0.x 的套件集中在單一檔案使用</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" hidden>
+      <div class="eyebrow">
+        <span class="mono num">05</span><span>選型</span><span class="rule"></span>
+      </div>
+      <h2>為什麼選 PocketBase</h2>
+      <ul>
+        <li><b>一個執行檔就是後端</b>：SQLite、REST API、檔案上傳、照片縮圖、管理後台、排程備份都內建</li>
+        <li><b>後端程式碼接近零</b>：不用寫 API、上傳、縮圖，schema 用 migration 定義</li>
+      </ul>
+      <div class="table-wrap wide">
+        <table>
+          <thead>
+            <tr><th>評估過的其他做法</th><th>結論</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>自建 Hono ＋ Prisma ＋ SQLite</td><td>寫得漂亮但鷹架多；列為 PocketBase 的<b>退場方案</b></td></tr>
+            <tr><td>P1 就直接做 app，跳過後端</td><td>省掉 Docker 與日後搬遷，但 P1 就要架 Android 環境、沒有後台與縮圖。想最快開始用，所以沒選</td></tr>
+            <tr><td>P3 把 PocketBase 包進 app</td><td>官方不支援，唯一的社群專案停在 v0.24.4，還要自己寫原生包裝。不划算</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">
+        <b>講者備註：</b>三個結論分別在 2026-09-11 查證過，理由寫在 CLAUDE.md 的決策紀錄。
+      </p>
+    </section>
+
+    <section class="slide" hidden>
+      <div class="eyebrow">
+        <span class="mono num">06</span><span>選型</span><span class="rule"></span>
+      </div>
+      <h2>「先用用看」的選擇，要管理才不會拖著不換</h2>
+      <p class="lede">
+        PocketBase 還沒到 1.0，官方自己說不建議用在關鍵的正式環境。
+        所以它從一開始就是<b>暫定</b>的，配了三件事，避免變成「不太滿意但也懶得換」。
+      </p>
+      <div class="cards">
+        <div class="card">
+          <h3>1 · 先寫下換掉它的條件</h3>
+          <p>
+            權限擋住想做的事／資料庫與手寫型別對不上而反覆出 bug／升級遇到破壞性改版／需要的查詢做不到，被迫自己寫伺服器程式。出現任一項就重新評估，不靠模糊的不爽
+          </p>
+        </div>
+        <div class="card">
+          <h3>2 · 定期檢查，不是等出事</h3>
+          <p>P1、P2 結束各檢核一次，逐條對照並把結論寫進文件。<b>兩次都是四項全沒觸發</b>，所以續用；去留最後在 P3 決定</p>
+        </div>
+        <div class="card">
+          <h3>3 · 同時準備好退路</h3>
+          <p>資料存取集中在 <code>src/repo/</code>，版本 pin 死、schema 進 git、資料進出用 zod 驗證。真要換，重寫的只有那一層，畫面不用動</p>
+        </div>
+      </div>
+      <ul>
+        <li><b>當初選它的三個理由，兌現了兩個</b>：檔案上傳、照片縮圖不用自己寫</li>
+        <li><b class="warn">落空的是備份</b>：它的備份功能要管理員登入，前端用不了 → 改成 app 自己的備份格式，P3 搬到手機也能沿用</li>
+        <li><b>升級實測過一次</b>：v0.40.3 → v0.40.4，只改版本與 checksum，程式不用動</li>
+      </ul>
+    </section>
+
+    <section class="slide" hidden>
+      <div class="eyebrow">
+        <span class="mono num">07</span><span>選型</span><span class="rule"></span>
+      </div>
+      <h2>其他選擇：選了什麼、沒選什麼</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>領域</th><th>選了</th><th>沒選</th><th>理由</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>前端</td><td>Vite ＋ React</td><td>Next.js</td><td>用不到 SSR、SEO；Capacitor 只吃靜態檔</td></tr>
+            <tr><td>App 化</td><td>Capacitor</td><td>React Native、Flutter</td><td>表單＋清單＋相機＋通知都在舒適區；RN 要重寫 UI，Flutter 連資料層都要重寫</td></tr>
+            <tr><td>資料庫</td><td>SQLite</td><td>Postgres</td><td>單人沒有併發問題；備份就是複製一個資料夾</td></tr>
+            <tr><td>提醒</td><td>本地通知</td><td>Telegram、Web Push</td><td>不需要 HTTPS、伺服器、憑證</td></tr>
+            <tr><td>Lint</td><td>oxlint</td><td>ESLint</td><td>專案用 TypeScript 7，typescript-eslint 只支援 6.1 以前</td></tr>
+            <tr><td>拖曳</td><td>@dnd-kit/react</td><td>@dnd-kit/core</td><td>舊版停更；新版支援 React 19，代價是 0.x</td></tr>
+            <tr><td>備份</td><td>自己的 zip 格式</td><td>PocketBase 備份 API</td><td>API 要管理員登入；它的備份檔 P3 讀不了</td></tr>
+            <tr><td>日期欄位</td><td>文字＋格式檢查</td><td>date 型別</td><td>後台改日期會用瀏覽器時區，悄悄差一天</td></tr>
+            <tr><td>照片</td><td>JPEG</td><td>WebP</td><td>PocketBase 的縮圖只完整支援 jpg、png、gif</td></tr>
+            <tr><td>字型</td><td>放進 repo</td><td>Google Fonts CDN</td><td>app 離線時載不到</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note"><b>講者備註：</b>「沒選」欄只列真的評估過的選項，不是硬湊。<br /><br /><b>Capacitor 而不是 React Native：</b>RN 是 React 但不是 DOM——div、span、button 要換成 View、Text、Pressable，Tailwind 要換 NativeWind，底部面板、選照片、壓縮照片、日期輸入、路由、localStorage、icon 套件全部要換，約 8,300 行畫面幾乎重寫；留得住的只有 shared、repo、backup 與測試。RN 換來的原生手感，在「幾十筆清單 ＋ 表單」的 app 上感覺不出來。Capacitor 的代價是畫面跑在 WebView，手感就是網頁手感，原生功能要靠外掛。（NativeWind 對 Tailwind v4 的支援度沒查證）</p>
+    </section>
+
+    <section class="slide" hidden>
+      <div class="eyebrow">
+        <span class="mono num">08</span><span>工作流程</span><span class="rule"></span>
+      </div>
+      <h2>一個 task 的生命週期</h2>
+      <div class="flow">
+        <div class="step me"><span class="who">我</span><span>開始 P2-8</span></div>
+        <div class="arrow">↓</div>
+        <div class="step ai"><span class="who">Claude</span><span>唯讀探索：讀程式、文件、套件原始碼</span></div>
+        <div class="arrow">↓</div>
+        <div class="step ai"><span class="who">Claude</span><span>提案：項目清單一項一行 ＋ 編號問題附選項</span></div>
+        <div class="arrow">↓</div>
+        <div class="step me"><span class="who">我</span><span>回「1a 2b 3a」</span></div>
+        <div class="arrow">↓</div>
+        <div class="step ai"><span class="who">Claude</span><span>實作，test、lint、format、build 全過</span></div>
+        <div class="arrow">↓</div>
+        <div class="step me"><span class="who">我</span><span>照 Claude 列的步驟在手機實測，回「1-5 正常」</span></div>
+        <div class="arrow">↓ <span class="warn">有問題就查 log 與原始碼，說明原因，再提案修</span></div>
+        <div class="step ai"><span class="who">Claude</span><span>提案文件怎麼寫 → 我同意 → 寫文件、勾掉 task</span></div>
+        <div class="arrow">↓</div>
+        <div class="step me"><span class="who">我</span><span>commit（明確指定檔案）</span></div>
+      </div>
+      <p class="note">
+        <b>講者備註：</b>重點是「提案和執行分成不同回合」，不會提完案就順手做了。唯讀的探索不用問。
+      </p>
+    </section>
+
+    <section class="slide" hidden>
+      <div class="eyebrow">
+        <span class="mono num">09</span><span>工作流程</span><span class="rule"></span>
+      </div>
+      <h2>文件就是記憶</h2>
+      <p class="lede">
+        session 會結束，長對話會被壓縮成摘要。<b>沒寫進文件的決定，下一個 session 就不存在</b>，甚至會被重新推翻。
+      </p>
+      <div class="table-wrap wide">
+        <table>
+          <thead><tr><th>文件</th><th>放什麼</th></tr></thead>
+          <tbody>
+            <tr><td>全域 CLAUDE.md</td><td>怎麼跟我合作：提案規則、破壞性操作、查證與標明未驗證的標準</td></tr>
+            <tr><td>專案 CLAUDE.md</td><td>紀律、已知的坑、決策紀錄、指令。每條附「為什麼」</td></tr>
+            <tr><td>PRODUCT.md</td><td>規格：原型呈現不出來的規則與理由</td></tr>
+            <tr><td>prototype/</td><td>確認過的畫面（P0、P3）</td></tr>
+            <tr><td>TASKS.md</td><td>一次做一項，每項有完成定義，另有檢核點</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul>
+        <li>推導出決定、發現文件有誤，<b>當下就提案寫入</b>，包含放哪一節、確切措辭</li>
+        <li>提案是義務，<b>寫不寫由我決定</b></li>
+        <li>推翻文件裡的斷言時，<b>修正要跟更正一起提出</b></li>
+      </ul>
+    </section>
+
+    <section class="slide" hidden>
+      <div class="eyebrow">
+        <span class="mono num">10</span><span>工作流程</span><span class="rule"></span>
+      </div>
+      <h2>分工，以及環境限制怎麼形成做法</h2>
+      <div class="table-wrap wide">
+        <table>
+          <thead><tr><th>Claude</th><th>我</th></tr></thead>
+          <tbody>
+            <tr><td>寫程式與文件、跑測試與檢查</td><td>做決定、確認提案</td></tr>
+            <tr><td>讀 log、讀原始碼、查 npm 版本</td><td>安裝套件（Claude 給名稱與版本）</td></tr>
+            <tr><td>列手機測試步驟與預期結果</td><td>跑 docker、手機實測回報</td></tr>
+            <tr><td>提案文件寫法</td><td>commit</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul>
+        <li><b>沙箱</b>：Claude 的指令跑在沙箱裡，不能執行 docker → docker 由我跑，輸出貼回去</li>
+        <li><b>權限</b>：不能寫全域設定檔 → 先寫到暫存資料夾，我再替換</li>
+        <li><b>git</b>：沙箱會在專案根目錄掛出空的設定檔，<code>git add -A</code> 曾誤收 22 個空檔 → 一律指定檔案</li>
+        <li><b>context 壓縮</b>：摘要後細節可能失真 → 以文件為準，不確定就回頭讀檔</li>
+      </ul>
+    </section>
+
+    <section class="slide" hidden>
+      <div class="eyebrow">
+        <span class="mono num">11</span><span>工作流程</span><span class="rule"></span>
+      </div>
+      <h2>為什麼這個專案幾乎不派 sub agent</h2>
+      <p class="lede">
+        Claude Code 可以開出多個 sub agent 平行做事。這個專案刻意不這樣做，因為它解決不了這裡真正的瓶頸。
+      </p>
+      <ul>
+        <li><b>卡點是「要不要做」，不是「做得多快」</b>：流程是先提案、等我回覆選項。sub agent 不能替我做決定，派出去只會提早動手</li>
+        <li><b>回報一律當成未驗證</b>：重要的結論還是要自己再讀一次原始碼或 log，省不下來，還多一層轉述失真</li>
+        <li><b>剛寫進 CLAUDE.md 的規則傳不到</b>：CLAUDE.md 是 session 啟動時的快照，改完要重開 session 才會帶給 sub agent（2026-09-08 實測）。剛定下的規矩，它看不到</li>
+        <li><b>真正的瓶頸在實機驗證</b>：一次做一項、我在手機上測過才往下走，平行做沒有意義</li>
+      </ul>
+      <div class="card" style="margin-top: 18px; max-width: 640px">
+        <h3>什麼時候適合</h3>
+        <p>大範圍的唯讀搜尋，例如「這個東西在哪些檔案被用到」——結論單純、容易自己驗證，也不會改到東西。</p>
+      </div>
+      <p class="note">
+        <b>講者備註：</b>這頁的四個理由是現在整理出來的，不是逐字引用先前的對話；前面幾輪的內容已經被壓縮，我沒辦法原文核對。
+      </p>
+    </section>
+
+    <section class="slide" hidden>
+      <div class="eyebrow">
+        <span class="mono num">12</span><span>品質</span><span class="rule"></span>
+      </div>
+      <h2>查證、原型關卡、實機驗證</h2>
+      <div class="cards">
+        <div class="card">
+          <h3>查證，不靠猜</h3>
+          <p>讀 PocketBase 原始碼確認欄位空值、權限預設、刪除時怎麼清檔；查 npm registry 確認版本與相依；沒驗證的判斷要標明</p>
+        </div>
+        <div class="card">
+          <h3>原型關卡</h3>
+          <p>每階段開工前，畫面先做成 HTML 原型並確認。原型改一次便宜，寫進程式再改貴好幾倍</p>
+        </div>
+        <div class="card">
+          <h3>交付前</h3>
+          <p>test、lint、format、build 全過，再加手機實測</p>
+        </div>
+      </div>
+      <ul>
+        <li>手機實測抓到、單元測試抓不到的：網頁版開相機拍照會遺失、底部面板開著時提示條按不到</li>
+        <li>原型驗證不了的：相機、通知樣式、拖曳手感 → 留到實機測</li>
+      </ul>
+    </section>
+
+    <section class="slide" hidden>
+      <div class="eyebrow">
+        <span class="mono num">13</span><span>誠實</span><span class="rule"></span>
+      </div>
+      <h2>Claude 判斷錯的時候</h2>
+      <div class="table-wrap wide">
+        <table>
+          <thead><tr><th>案例</th><th>怎麼發現</th><th>怎麼處理</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="bad">規格寫「網頁版可以開相機拍照」</td>
+              <td>手機實測照片遺失</td>
+              <td>更正規格，P2 改成只能從相簿選，拍照留到 P3</td>
+            </tr>
+            <tr>
+              <td class="bad">估「很多年才會到 49 筆更換紀錄」</td>
+              <td>重新估算時發現沒考慮 7 天週期</td>
+              <td>上限調到 1000，實測 999 筆</td>
+            </tr>
+            <tr>
+              <td class="bad">把舊的指令輸出當成現況在推原因</td>
+              <td>事後對照輸出的時間</td>
+              <td>更正推論；規則加上「先確認輸出的來源和時間」</td>
+            </tr>
+            <tr>
+              <td class="bad">還原備份時照片被背景清掉</td>
+              <td>升級後發現照片不見，查出是更早一次還原造成</td>
+              <td>查請求紀錄與原始碼找原因、修正、四種情況實測，寫進 CLAUDE.md</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ul>
+        <li><b>對策都寫成規則</b>：沒驗證的要標明、判斷錯要明講、估算先列假設、推翻斷言時要一起提修正</li>
+        <li><b>下一步</b>：P3，Android app 與本地通知</li>
+      </ul>
+    </section>
+  </main>
+
+  <div class="bar">
+    <button type="button" id="prev" aria-label="上一頁">←</button>
+    <button type="button" id="next" aria-label="下一頁">→</button>
+    <div class="track"><div class="fill" id="fill"></div></div>
+    <span class="mono" id="counter">1 / 11</span>
+    <button type="button" id="notes">備註 N</button>
+    <button type="button" id="theme">深淺</button>
+  </div>
+</div>
+
+<script>
+  const slides = [...document.querySelectorAll(".slide")];
+  const fill = document.getElementById("fill");
+  const counter = document.getElementById("counter");
+  let index = 0;
+  let notesOn = false;
+
+  function show(next) {
+    index = Math.max(0, Math.min(slides.length - 1, next));
+    slides.forEach((slide, i) => {
+      slide.hidden = i !== index;
+    });
+    fill.style.width = `${((index + 1) / slides.length) * 100}%`;
+    counter.textContent = `${index + 1} / ${slides.length}`;
+    // 網址記住頁碼，重新整理不會跳回第一頁
+    history.replaceState(null, "", `#${index + 1}`);
+    window.scrollTo(0, 0);
+  }
+  function toggleNotes(on) {
+    notesOn = on ?? !notesOn;
+    document.querySelectorAll(".note").forEach((note) => {
+      note.hidden = !notesOn;
+    });
+  }
+
+  document.getElementById("prev").onclick = () => show(index - 1);
+  document.getElementById("next").onclick = () => show(index + 1);
+  document.getElementById("notes").onclick = () => toggleNotes();
+  document.getElementById("theme").onclick = () => {
+    const root = document.documentElement;
+    const dark =
+      root.dataset.theme === "dark" ||
+      (!root.dataset.theme &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches);
+    root.dataset.theme = dark ? "light" : "dark";
+  };
+
+  addEventListener("keydown", (event) => {
+    const keys = {
+      ArrowRight: 1,
+      ArrowDown: 1,
+      PageDown: 1,
+      " ": 1,
+      ArrowLeft: -1,
+      ArrowUp: -1,
+      PageUp: -1,
+    };
+    if (event.key in keys) {
+      event.preventDefault();
+      show(index + keys[event.key]);
+    } else if (event.key === "Home") {
+      show(0);
+    } else if (event.key === "End") {
+      show(slides.length - 1);
+    } else if (event.key.toLowerCase() === "n") {
+      toggleNotes();
+    }
+  });
+
+  // 手機：左右滑動翻頁
+  let startX = null;
+  addEventListener("touchstart", (e) => {
+    startX = e.touches[0].clientX;
+  }, { passive: true });
+  addEventListener("touchend", (e) => {
+    if (startX === null) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) > 60) show(index + (dx < 0 ? 1 : -1));
+    startX = null;
+  }, { passive: true });
+
+  toggleNotes(false);
+  show(Number(location.hash.slice(1)) - 1 || 0);
+</script>

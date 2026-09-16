@@ -354,7 +354,7 @@ function NewItemForm({
         <p className={LABEL_CLASS}>
           物品照片{" "}
           <span className="font-normal text-ink-3">
-            機身、型號貼紙、濾網裝在哪
+            機身、型號貼紙、濾網裝在哪，之後買耗材時用得到
           </span>
         </p>
         <StagedPhotoField

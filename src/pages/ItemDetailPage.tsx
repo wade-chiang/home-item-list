@@ -195,7 +195,7 @@ function ItemPhotosCard({ item }: { item: ItemEntry["item"] }) {
           物品照片
         </h3>
         <span className="text-[11.5px] text-ink-3">
-          機身、型號貼紙 · 最多 5 張
+          機身、型號貼紙、濾網裝在哪 · 最多 5 張
         </span>
       </div>
       <div className="mt-2.5">
