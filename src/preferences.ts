@@ -1,6 +1,8 @@
 // 這支手機自己的偏好（PRODUCT.md §4.6「存在手機本機」）。不是 PocketBase 的資料，所以不放 src/repo/。
 // 存在 localStorage：P3 包成 Capacitor app 後 WebView 裡仍可用，要不要改用偏好設定外掛到 P3 再評估。
 
+import { defaultPaletteId, type PaletteMode, PALETTES } from "./palettes.ts";
+
 export type ThemePreference = "system" | "light" | "dark";
 
 /**
@@ -43,6 +45,62 @@ export function applyThemePreference(preference: ThemePreference): void {
     root.removeAttribute("data-theme");
   } else {
     root.setAttribute("data-theme", preference);
+  }
+}
+
+/**
+ * 配色偏好（P2-15）。淺色、深色分開存，選出來的組合寫在根元素上，由 src/index.css 的屬性選擇器套用。
+ * index.html 裡那段 script 寫死同樣的 key 與屬性名稱，改名時兩邊要一起改
+ */
+export const PALETTE_STORAGE_KEY: Record<PaletteMode, string> = {
+  light: "home-item-list.palette.light",
+  dark: "home-item-list.palette.dark",
+};
+
+/** 存的值不認得（沒存過、被手動改過、或那組配色已經移除）時一律當成預設 */
+export function parsePalettePreference(
+  mode: PaletteMode,
+  value: string | null,
+): string {
+  return PALETTES[mode].some((palette) => palette.id === value)
+    ? (value as string)
+    : defaultPaletteId(mode);
+}
+
+export function readPalettePreference(mode: PaletteMode): string {
+  try {
+    return parsePalettePreference(
+      mode,
+      localStorage.getItem(PALETTE_STORAGE_KEY[mode]),
+    );
+  } catch {
+    // 見 readThemePreference
+    return defaultPaletteId(mode);
+  }
+}
+
+/** 存起來並立刻套用。存不進去時仍然套用，只是下次開啟不會記得 */
+export function savePalettePreference(mode: PaletteMode, id: string): void {
+  try {
+    if (id === defaultPaletteId(mode)) {
+      localStorage.removeItem(PALETTE_STORAGE_KEY[mode]);
+    } else {
+      localStorage.setItem(PALETTE_STORAGE_KEY[mode], id);
+    }
+  } catch {
+    // 見 readThemePreference
+  }
+  applyPalettePreference(mode, id);
+}
+
+/** 預設那組不寫屬性，index.css 的 :root 就是它（同 applyThemePreference 的做法） */
+export function applyPalettePreference(mode: PaletteMode, id: string): void {
+  const root = document.documentElement;
+  const attribute = `data-palette-${mode}`;
+  if (id === defaultPaletteId(mode)) {
+    root.removeAttribute(attribute);
+  } else {
+    root.setAttribute(attribute, id);
   }
 }
 

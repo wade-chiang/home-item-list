@@ -28,40 +28,40 @@ tailwind.config = {
 };
 </script>
 <style>
-/* 淺色：暖調中性色。主色維持深青，暖底配青色是互補，狀態色（磚紅、赭）壓深以確保當文字用時讀得清楚 */
+/* 淺色：石板藍灰（2026-09-16 選定）。藍灰底、靛藍主色；主色避開紅黃橘，那是逾期與即將到期的狀態色 */
 :root{
-  --ground:#F6F3EE; --surface:#FFFDF9; --surface-2:#FBF8F3;
-  --ink:#2B2520; --ink-2:#5F564F; --ink-3:#857B72;
-  --line:#E6DFD6; --line-2:#EFEAE3;
-  --accent:#0B5750; --accent-ink:#FFFFFF; --accent-soft:#E2EDE8;
-  --overdue:#B23A2E; --overdue-soft:#F7E4DF;
-  --soon:#8A5A0B; --soon-soft:#F5E8D0;
-  --paused:#A0968D;
-  --shadow:0 1px 2px rgba(43,37,32,.06), 0 6px 16px rgba(43,37,32,.05);
-  --scrim:rgba(30,24,18,.45);
+  --ground:#EEF1F5; --surface:#FAFBFD; --surface-2:#F3F6F9;
+  --ink:#1E2533; --ink-2:#4D5668; --ink-3:#6E7789;
+  --line:#D5DBE4; --line-2:#E4E8EF;
+  --accent:#3B4FA0; --accent-ink:#FFFFFF; --accent-soft:#E1E5F4;
+  --overdue:#B3372F; --overdue-soft:#F5E1DF;
+  --soon:#87590A; --soon-soft:#F2E6CE;
+  --paused:#959DAB;
+  --shadow:0 1px 2px rgba(30,37,51,.06), 0 6px 16px rgba(30,37,51,.05);
+  --scrim:rgba(20,26,38,.45);
 }
-/* 深色：使用者確認過 v1 可以，維持不動 */
+/* 深色：深海藍（2026-09-16 選定） */
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --ground:#0E1412; --surface:#18201D; --surface-2:#1E2724;
-    --ink:#E8ECE9; --ink-2:#AFBBB7; --ink-3:#85938E;
-    --line:#2A3430; --line-2:#222B28;
-    --accent:#43B3A6; --accent-ink:#08201D; --accent-soft:#12312D;
-    --overdue:#F2705F; --overdue-soft:#3A1F1B;
-    --soon:#D9A33A; --soon-soft:#332715;
-    --paused:#6E7B77;
+    --ground:#0B1220; --surface:#131C2E; --surface-2:#1A2438;
+    --ink:#E6ECF5; --ink-2:#A9B6CA; --ink-3:#8292A9;
+    --line:#26324A; --line-2:#1E2940;
+    --accent:#6CC4E8; --accent-ink:#06202C; --accent-soft:#14304A;
+    --overdue:#F47A6C; --overdue-soft:#3A1E22;
+    --soon:#E3AE4C; --soon-soft:#33291A;
+    --paused:#6F7D93;
     --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 16px rgba(0,0,0,.3);
     --scrim:rgba(0,0,0,.55);
   }
 }
 :root[data-theme="dark"]{
-  --ground:#0E1412; --surface:#18201D; --surface-2:#1E2724;
-  --ink:#E8ECE9; --ink-2:#AFBBB7; --ink-3:#85938E;
-  --line:#2A3430; --line-2:#222B28;
-  --accent:#43B3A6; --accent-ink:#08201D; --accent-soft:#12312D;
-  --overdue:#F2705F; --overdue-soft:#3A1F1B;
-  --soon:#D9A33A; --soon-soft:#332715;
-  --paused:#6E7B77;
+  --ground:#0B1220; --surface:#131C2E; --surface-2:#1A2438;
+  --ink:#E6ECF5; --ink-2:#A9B6CA; --ink-3:#8292A9;
+  --line:#26324A; --line-2:#1E2940;
+  --accent:#6CC4E8; --accent-ink:#06202C; --accent-soft:#14304A;
+  --overdue:#F47A6C; --overdue-soft:#3A1E22;
+  --soon:#E3AE4C; --soon-soft:#33291A;
+  --paused:#6F7D93;
   --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 16px rgba(0,0,0,.3);
   --scrim:rgba(0,0,0,.55);
 }

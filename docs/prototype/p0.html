@@ -257,7 +257,7 @@ const BADGE = {overdue:'bg-overdue-soft text-overdue', soon:'bg-soon-soft text-s
 const settings = {defaultLead:7};
 // showPrice 固定為 true：使用者決定保留價格記錄（規格草稿 #13），原型選單的開關已拿掉
 const view = {screen:'home', back:'home', detailId:'lr-ac', itemIcons:true, showPrice:true, homeFilter:null, theme:'system',
-  lightPal:'current', darkPal:'current'};
+  lightPal:'slate', darkPal:'deepsea'};
 const PRE = [30,60,90,180,365];
 let F = freshForm();
 function freshForm(){
@@ -624,6 +624,11 @@ function renderSettings(){
   return `
   ${sectDiv('外觀')}
   ${themeSeg()}
+  <button data-palette class="mt-2 flex w-full items-center justify-between gap-4 rounded-xl border border-line bg-surface px-3.5 py-3 text-left">
+    <span class="min-w-0 flex-1"><span class="block text-[14.5px]">配色</span>
+      <span class="block text-[12px] text-ink-3">淺色 ${palName('light')} · 深色 ${palName('dark')}</span></span>
+    <span class="flex shrink-0 items-center gap-1">${palSwatch(view.theme==='dark'?'dark':'light')}<span class="text-ink-3">${ic('chevR',16)}</span></span>
+  </button>
   <div class="mt-2">${switchRow('itemIcons','物品 icon','在首頁列表顯示類別的 icon')}</div>
 
   ${sectDiv('提醒')}
@@ -867,12 +872,11 @@ function openProto(){
     <p class="mt-1 text-[13px] text-ink-3">P0 專用，正式版不會有這個選單。</p>
     ${sectDiv('主題')}
     ${themeSeg()}
-    ${sectDiv('配色（比較用）')}
-    <p class="-mt-1 text-[12px] leading-relaxed text-ink-3">淺色、深色分開挑。點一組會同時切到對應的主題，直接看到效果；色塊依序是底色、卡片、主色、逾期、即將到期。</p>
-    <div class="mt-3 text-[13px] font-medium text-ink-2">淺色</div>
-    ${palRows('light')}
-    <div class="mt-4 text-[13px] font-medium text-ink-2">深色</div>
-    ${palRows('dark')}
+    ${sectDiv('配色')}
+    <button data-palette-jump class="flex w-full items-center gap-3 rounded-xl border border-line px-3.5 py-3 text-left">
+      <span class="min-w-0 flex-1"><span class="block text-[14.5px]">選配色</span>
+        <span class="block text-[12px] text-ink-3">淺色 ${palName('light')} · 深色 ${palName('dark')}；正式版在設定 → 外觀 → 配色</span></span>
+      <span class="text-ink-3">${ic('chevR',16)}</span></button>
     ${sectDiv('跳到畫面')}
     <div class="flex flex-col gap-2">
       ${screens.map((sc,i)=>`<button data-scr="${i}" class="flex w-full items-center gap-3 rounded-xl border border-line px-3.5 py-3 text-left">
@@ -887,13 +891,7 @@ function openProto(){
     if(t===scrim || t.closest('[data-close]')) return close();
     const g = t.closest('[data-tog]'); if(g){ view[g.dataset.tog] = !view[g.dataset.tog]; draw(); render(); return; }
     const th = t.closest('[data-theme-set]'); if(th){ setTheme(th.dataset.themeSet); draw(); render(); return; }
-    const pal = t.closest('[data-pal]');
-    if(pal){
-      const [kind, id] = pal.dataset.pal.split(':');
-      view[kind+'Pal'] = id;
-      // 切到對應主題：在淺色系統下點深色配色，才看得到效果
-      setTheme(kind); applyPalette(); draw(); render(); return;
-    }
+    if(t.closest('[data-palette-jump]')){ close(); openPalette(); return; }
     const sc = t.closest('[data-scr]');
     if(sc){
       const v = screens[+sc.dataset.scr][1];
@@ -1287,7 +1285,7 @@ function openLogEdit(itemId, idx){
 const DARK_SHADOW = {shadow:'0 1px 2px rgba(0,0,0,.4), 0 6px 16px rgba(0,0,0,.3)', scrim:'rgba(0,0,0,.55)'};
 const PALETTES = {
   light: [
-    {id:'current', name:'現行', desc:'暖米白底、深青主色', v:{
+    {id:'sand', name:'暖米白', desc:'暖米白底、深青主色（原本的預設）', v:{
       ground:'#F6F3EE', surface:'#FFFDF9', 'surface-2':'#FBF8F3', ink:'#2B2520', 'ink-2':'#5F564F', 'ink-3':'#857B72',
       line:'#E6DFD6', 'line-2':'#EFEAE3', accent:'#0B5750', 'accent-ink':'#FFFFFF', 'accent-soft':'#E2EDE8',
       overdue:'#B23A2E', 'overdue-soft':'#F7E4DF', soon:'#8A5A0B', 'soon-soft':'#F5E8D0', paused:'#A0968D',
@@ -1308,14 +1306,14 @@ const PALETTES = {
       overdue:'#C0271C', 'overdue-soft':'#FCE6E4', soon:'#946000', 'soon-soft':'#FBEFD6', paused:'#9A9A9A',
       // 底色與卡片同為白色，卡片只靠陰影分開，所以陰影比其他組深一點
       shadow:'0 1px 2px rgba(0,0,0,.08), 0 4px 14px rgba(0,0,0,.07)', scrim:'rgba(0,0,0,.45)'}},
-    {id:'slate', name:'石板藍灰', desc:'藍灰底、靛藍主色，比現行冷、比紙白柔和', v:{
+    {id:'slate', name:'石板藍灰', desc:'藍灰底、靛藍主色（預設）', v:{
       ground:'#EEF1F5', surface:'#FAFBFD', 'surface-2':'#F3F6F9', ink:'#1E2533', 'ink-2':'#4D5668', 'ink-3':'#6E7789',
       line:'#D5DBE4', 'line-2':'#E4E8EF', accent:'#3B4FA0', 'accent-ink':'#FFFFFF', 'accent-soft':'#E1E5F4',
       overdue:'#B3372F', 'overdue-soft':'#F5E1DF', soon:'#87590A', 'soon-soft':'#F2E6CE', paused:'#959DAB',
       shadow:'0 1px 2px rgba(30,37,51,.06), 0 6px 16px rgba(30,37,51,.05)', scrim:'rgba(20,26,38,.45)'}},
   ],
   dark: [
-    {id:'current', name:'現行', desc:'墨綠黑底、青綠主色（v1 已確認）', v:{
+    {id:'forest', name:'墨綠黑', desc:'墨綠黑底、青綠主色（原本的預設）', v:{
       ground:'#0E1412', surface:'#18201D', 'surface-2':'#1E2724', ink:'#E8ECE9', 'ink-2':'#AFBBB7', 'ink-3':'#85938E',
       line:'#2A3430', 'line-2':'#222B28', accent:'#43B3A6', 'accent-ink':'#08201D', 'accent-soft':'#12312D',
       overdue:'#F2705F', 'overdue-soft':'#3A1F1B', soon:'#D9A33A', 'soon-soft':'#332715', paused:'#6E7B77', ...DARK_SHADOW}},
@@ -1327,11 +1325,11 @@ const PALETTES = {
       ground:'#000000', surface:'#111413', 'surface-2':'#171B1A', ink:'#E9EEEC', 'ink-2':'#AAB5B1', 'ink-3':'#808B87',
       line:'#262B29', 'line-2':'#1C201F', accent:'#5FD3B3', 'accent-ink':'#032018', 'accent-soft':'#0F2E26',
       overdue:'#FF7566', 'overdue-soft':'#2E1512', soon:'#E8B04A', 'soon-soft':'#2C2210', paused:'#6B7572', ...DARK_SHADOW}},
-    {id:'deepsea', name:'深海藍', desc:'深藍黑底、淡青藍主色', v:{
+    {id:'deepsea', name:'深海藍', desc:'深藍黑底、淡青藍主色（預設）', v:{
       ground:'#0B1220', surface:'#131C2E', 'surface-2':'#1A2438', ink:'#E6ECF5', 'ink-2':'#A9B6CA', 'ink-3':'#8292A9',
       line:'#26324A', 'line-2':'#1E2940', accent:'#6CC4E8', 'accent-ink':'#06202C', 'accent-soft':'#14304A',
       overdue:'#F47A6C', 'overdue-soft':'#3A1E22', soon:'#E3AE4C', 'soon-soft':'#33291A', paused:'#6F7D93', ...DARK_SHADOW}},
-    {id:'warm', name:'暖炭', desc:'帶暖色的深灰、鼠尾草綠主色，跟現行淺色的暖調搭', v:{
+    {id:'ember', name:'暖炭', desc:'帶暖色的深灰、鼠尾草綠主色，跟暖米白的暖調搭', v:{
       ground:'#151311', surface:'#1F1C19', 'surface-2':'#26221F', ink:'#EDE7E1', 'ink-2':'#BDB3A9', 'ink-3':'#928880',
       line:'#332E2A', 'line-2':'#2A2623', accent:'#8FBF9A', 'accent-ink':'#102015', 'accent-soft':'#243328',
       overdue:'#EF7361', 'overdue-soft':'#3B201B', soon:'#DCA640', 'soon-soft':'#342816', paused:'#7B726B', ...DARK_SHADOW}},
@@ -1350,6 +1348,43 @@ function applyPalette(){
   el.textContent = `html:root{${vars(L)}}
 @media (prefers-color-scheme: dark){html:root:not([data-theme="light"]){${D}}}
 html:root[data-theme="dark"]{${D}}`;
+}
+const palOf = kind=>PALETTES[kind].find(p=>p.id===view[kind+'Pal']);
+const palName = kind=>palOf(kind).name;
+/* 設定頁那一列的小色塊：底色、卡片、主色 */
+function palSwatch(kind){
+  const v = palOf(kind).v;
+  return `<span class="flex overflow-hidden rounded-md border" style="border-color:${v.line}">
+    ${[v.ground, v.surface, v.accent].map(c=>`<span class="block h-5 w-3" style="background:${c}"></span>`).join('')}</span>`;
+}
+/* 設定頁的配色面板。選了立刻套用、面板不關，可以連著比較 */
+function openPalette(){
+  const {scrim, body, close} = makeSheet();
+  const draw = ()=>{
+    body.innerHTML = `
+    <div class="flex items-center justify-between">
+      <h3 class="text-[18px] font-semibold">配色</h3>
+      <button data-close class="-mr-1.5 grid h-9 w-9 place-items-center rounded-lg text-ink-3" aria-label="關閉">${ic('x',20)}</button>
+    </div>
+    <p class="mt-1.5 text-[13.5px] leading-relaxed text-ink-3">淺色、深色分開挑，選了立刻套用。色塊依序是底色、卡片、主色、逾期、即將到期。</p>
+    <div class="mt-4 text-[13px] font-medium text-ink-2">淺色</div>
+    ${palRows('light')}
+    <div class="mt-4 text-[13px] font-medium text-ink-2">深色</div>
+    ${palRows('dark')}
+    <button data-close class="mt-4 w-full py-3 text-[14px] text-ink-3">完成</button>`;
+  };
+  draw();
+  scrim.addEventListener('click', e=>{
+    const t = e.target;
+    if(t===scrim || t.closest('[data-close]')) return close();
+    const pal = t.closest('[data-pal]');
+    if(pal){
+      const [kind, id] = pal.dataset.pal.split(':');
+      view[kind+'Pal'] = id;
+      // 切到對應主題：在淺色下點深色配色，才看得到效果
+      setTheme(kind); applyPalette(); draw(); render();
+    }
+  });
 }
 function palRows(kind){
   return `<div class="mt-1.5 flex flex-col gap-2">${PALETTES[kind].map(p=>{
@@ -1437,6 +1472,7 @@ document.addEventListener('click', e=>{
   if(t.closest('[data-fphoto-view]')){ openPhotoView('物品照片', ()=>{ F.itemPhotos--; render(); }); return; }
   const di = t.closest('[data-del-item]'); if(di){ openDeleteItem(di.dataset.delItem); return; }
   if(t.closest('[data-edit-lead]')){ openLeadSetting(); return; }
+  if(t.closest('[data-palette]')){ openPalette(); return; }
   if(t.closest('[data-export]')){ openExport(); return; }
   if(t.closest('[data-restore]')){ openRestore(); return; }
   if(t.closest('[data-reorder]')){ view.reorderLocs = !view.reorderLocs; render(); return; }

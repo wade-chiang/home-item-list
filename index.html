@@ -6,11 +6,23 @@
     <title>換了沒</title>
     <script>
       // 在畫面出現前套用外觀設定，避免選了深色卻先閃一下淺色（P1-19 確認）。
-      // key 與 src/preferences.ts 的 THEME_STORAGE_KEY 相同，改名時兩邊要一起改；讀取失敗時維持跟隨系統
+      // key 與 src/preferences.ts 相同，改名時兩邊要一起改；讀取失敗時維持預設
       try {
+        var root = document.documentElement;
         var theme = localStorage.getItem("home-item-list.theme");
         if (theme === "light" || theme === "dark") {
-          document.documentElement.setAttribute("data-theme", theme);
+          root.setAttribute("data-theme", theme);
+        }
+        // 配色（P2-15）。預設那組不寫屬性，所以清單裡只有非預設的 id，要跟 src/palettes.ts 一致
+        var palettes = {
+          light: ["sand", "paper", "mint", "mono"],
+          dark: ["forest", "charcoal", "oled", "ember"],
+        };
+        for (var mode in palettes) {
+          var id = localStorage.getItem("home-item-list.palette." + mode);
+          if (palettes[mode].indexOf(id) >= 0) {
+            root.setAttribute("data-palette-" + mode, id);
+          }
         }
       } catch (error) {}
     </script>

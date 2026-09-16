@@ -70,8 +70,36 @@
 }
 
 @layer base {
-  /* 淺色：暖調中性色。主色維持深青，暖底配青色是互補，狀態色（磚紅、赭）壓深以確保當文字用時讀得清楚 */
+  /* 配色（P2-15）：淺色、深色各 5 組，預設是石板藍灰與深海藍。
+     每組是完整的一套 token；選了哪一組寫在根元素的 data-palette-light / data-palette-dark，
+     預設那組不寫屬性（同 data-theme 的做法）。顏色與名稱也出現在 src/palettes.ts 的預覽色塊，改配色時兩邊要一起改。
+     深色的選擇器都比淺色多一個條件，specificity 較高，所以深色一定蓋得過淺色。 */
+
+  /* 淺色預設：石板藍灰。藍灰底、靛藍主色；主色避開紅、黃、橘，那是逾期與即將到期的狀態色 */
   :root {
+    --ground: #eef1f5;
+    --surface: #fafbfd;
+    --surface-2: #f3f6f9;
+    --ink: #1e2533;
+    --ink-2: #4d5668;
+    --ink-3: #6e7789;
+    --line: #d5dbe4;
+    --line-2: #e4e8ef;
+    --accent: #3b4fa0;
+    --accent-ink: #ffffff;
+    --accent-soft: #e1e5f4;
+    --overdue: #b3372f;
+    --overdue-soft: #f5e1df;
+    --soon: #87590a;
+    --soon-soft: #f2e6ce;
+    --paused: #959dab;
+    --shadow:
+      0 1px 2px rgba(30, 37, 51, 0.06), 0 6px 16px rgba(30, 37, 51, 0.05);
+    --scrim: rgba(20, 26, 38, 0.45);
+  }
+
+  /* 淺色：暖米白 */
+  :root[data-palette-light="sand"] {
     --ground: #f6f3ee;
     --surface: #fffdf9;
     --surface-2: #fbf8f3;
@@ -93,10 +121,99 @@
     --scrim: rgba(30, 24, 18, 0.45);
   }
 
-  /* 深色：使用者確認過 v1 可以，維持不動。
-     跟隨系統時用 media query；使用者明確選了深色時用 data-theme，兩段數值必須相同。 */
+  /* 淺色：紙白墨藍 */
+  :root[data-palette-light="paper"] {
+    --ground: #f4f5f7;
+    --surface: #ffffff;
+    --surface-2: #f9fafb;
+    --ink: #1c2330;
+    --ink-2: #4a5363;
+    --ink-3: #737c8a;
+    --line: #dde1e7;
+    --line-2: #ebeef2;
+    --accent: #1f4a7a;
+    --accent-ink: #ffffff;
+    --accent-soft: #e3ebf4;
+    --overdue: #b42f2a;
+    --overdue-soft: #f8e3e1;
+    --soon: #8a5b00;
+    --soon-soft: #f6eacf;
+    --paused: #9aa1ac;
+    --shadow:
+      0 1px 2px rgba(28, 35, 48, 0.06), 0 6px 16px rgba(28, 35, 48, 0.05);
+    --scrim: rgba(20, 26, 36, 0.45);
+  }
+
+  /* 淺色：薄荷濾網 */
+  :root[data-palette-light="mint"] {
+    --ground: #f1f5f2;
+    --surface: #fbfdfb;
+    --surface-2: #f6faf7;
+    --ink: #1f2a24;
+    --ink-2: #4b5a51;
+    --ink-3: #6f7e75;
+    --line: #d8e2db;
+    --line-2: #e7eee9;
+    --accent: #2f6b45;
+    --accent-ink: #ffffff;
+    --accent-soft: #ddebe1;
+    --overdue: #b23a2e;
+    --overdue-soft: #f6e3de;
+    --soon: #86590c;
+    --soon-soft: #f3e7cf;
+    --paused: #97a39b;
+    --shadow:
+      0 1px 2px rgba(31, 42, 36, 0.06), 0 6px 16px rgba(31, 42, 36, 0.05);
+    --scrim: rgba(22, 32, 26, 0.45);
+  }
+
+  /* 淺色：純白高對比 */
+  :root[data-palette-light="mono"] {
+    --ground: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #f7f7f7;
+    --ink: #111111;
+    --ink-2: #444444;
+    --ink-3: #6b6b6b;
+    --line: #e2e2e2;
+    --line-2: #efefef;
+    --accent: #111111;
+    --accent-ink: #ffffff;
+    --accent-soft: #ededed;
+    --overdue: #c0271c;
+    --overdue-soft: #fce6e4;
+    --soon: #946000;
+    --soon-soft: #fbefd6;
+    --paused: #9a9a9a;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 4px 14px rgba(0, 0, 0, 0.07);
+    --scrim: rgba(0, 0, 0, 0.45);
+  }
+
+  /* 深色預設：深海藍。跟隨系統時用 media query，使用者明確選了深色時用 data-theme，兩段數值必須相同 */
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
+      --ground: #0b1220;
+      --surface: #131c2e;
+      --surface-2: #1a2438;
+      --ink: #e6ecf5;
+      --ink-2: #a9b6ca;
+      --ink-3: #8292a9;
+      --line: #26324a;
+      --line-2: #1e2940;
+      --accent: #6cc4e8;
+      --accent-ink: #06202c;
+      --accent-soft: #14304a;
+      --overdue: #f47a6c;
+      --overdue-soft: #3a1e22;
+      --soon: #e3ae4c;
+      --soon-soft: #33291a;
+      --paused: #6f7d93;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.3);
+      --scrim: rgba(0, 0, 0, 0.55);
+    }
+
+    /* 深色：墨綠黑 */
+    :root[data-palette-dark="forest"]:not([data-theme="light"]) {
       --ground: #0e1412;
       --surface: #18201d;
       --surface-2: #1e2724;
@@ -116,8 +233,97 @@
       --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.3);
       --scrim: rgba(0, 0, 0, 0.55);
     }
+
+    /* 深色：中性炭灰 */
+    :root[data-palette-dark="charcoal"]:not([data-theme="light"]) {
+      --ground: #121212;
+      --surface: #1c1c1e;
+      --surface-2: #232326;
+      --ink: #ececec;
+      --ink-2: #b4b4b8;
+      --ink-3: #8c8c92;
+      --line: #2e2e32;
+      --line-2: #262629;
+      --accent: #5aaef0;
+      --accent-ink: #07203a;
+      --accent-soft: #16293a;
+      --overdue: #f27062;
+      --overdue-soft: #3a1e1b;
+      --soon: #e0a93f;
+      --soon-soft: #33281a;
+      --paused: #75757c;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.3);
+      --scrim: rgba(0, 0, 0, 0.55);
+    }
+
+    /* 深色：OLED 純黑 */
+    :root[data-palette-dark="oled"]:not([data-theme="light"]) {
+      --ground: #000000;
+      --surface: #111413;
+      --surface-2: #171b1a;
+      --ink: #e9eeec;
+      --ink-2: #aab5b1;
+      --ink-3: #808b87;
+      --line: #262b29;
+      --line-2: #1c201f;
+      --accent: #5fd3b3;
+      --accent-ink: #032018;
+      --accent-soft: #0f2e26;
+      --overdue: #ff7566;
+      --overdue-soft: #2e1512;
+      --soon: #e8b04a;
+      --soon-soft: #2c2210;
+      --paused: #6b7572;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.3);
+      --scrim: rgba(0, 0, 0, 0.55);
+    }
+
+    /* 深色：暖炭 */
+    :root[data-palette-dark="ember"]:not([data-theme="light"]) {
+      --ground: #151311;
+      --surface: #1f1c19;
+      --surface-2: #26221f;
+      --ink: #ede7e1;
+      --ink-2: #bdb3a9;
+      --ink-3: #928880;
+      --line: #332e2a;
+      --line-2: #2a2623;
+      --accent: #8fbf9a;
+      --accent-ink: #102015;
+      --accent-soft: #243328;
+      --overdue: #ef7361;
+      --overdue-soft: #3b201b;
+      --soon: #dca640;
+      --soon-soft: #342816;
+      --paused: #7b726b;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.3);
+      --scrim: rgba(0, 0, 0, 0.55);
+    }
   }
+
   :root[data-theme="dark"] {
+    --ground: #0b1220;
+    --surface: #131c2e;
+    --surface-2: #1a2438;
+    --ink: #e6ecf5;
+    --ink-2: #a9b6ca;
+    --ink-3: #8292a9;
+    --line: #26324a;
+    --line-2: #1e2940;
+    --accent: #6cc4e8;
+    --accent-ink: #06202c;
+    --accent-soft: #14304a;
+    --overdue: #f47a6c;
+    --overdue-soft: #3a1e22;
+    --soon: #e3ae4c;
+    --soon-soft: #33291a;
+    --paused: #6f7d93;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.3);
+    --scrim: rgba(0, 0, 0, 0.55);
+  }
+
+  /* 深色：墨綠黑 */
+  :root[data-theme="dark"][data-palette-dark="forest"] {
     --ground: #0e1412;
     --surface: #18201d;
     --surface-2: #1e2724;
@@ -134,6 +340,72 @@
     --soon: #d9a33a;
     --soon-soft: #332715;
     --paused: #6e7b77;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.3);
+    --scrim: rgba(0, 0, 0, 0.55);
+  }
+
+  /* 深色：中性炭灰 */
+  :root[data-theme="dark"][data-palette-dark="charcoal"] {
+    --ground: #121212;
+    --surface: #1c1c1e;
+    --surface-2: #232326;
+    --ink: #ececec;
+    --ink-2: #b4b4b8;
+    --ink-3: #8c8c92;
+    --line: #2e2e32;
+    --line-2: #262629;
+    --accent: #5aaef0;
+    --accent-ink: #07203a;
+    --accent-soft: #16293a;
+    --overdue: #f27062;
+    --overdue-soft: #3a1e1b;
+    --soon: #e0a93f;
+    --soon-soft: #33281a;
+    --paused: #75757c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.3);
+    --scrim: rgba(0, 0, 0, 0.55);
+  }
+
+  /* 深色：OLED 純黑 */
+  :root[data-theme="dark"][data-palette-dark="oled"] {
+    --ground: #000000;
+    --surface: #111413;
+    --surface-2: #171b1a;
+    --ink: #e9eeec;
+    --ink-2: #aab5b1;
+    --ink-3: #808b87;
+    --line: #262b29;
+    --line-2: #1c201f;
+    --accent: #5fd3b3;
+    --accent-ink: #032018;
+    --accent-soft: #0f2e26;
+    --overdue: #ff7566;
+    --overdue-soft: #2e1512;
+    --soon: #e8b04a;
+    --soon-soft: #2c2210;
+    --paused: #6b7572;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.3);
+    --scrim: rgba(0, 0, 0, 0.55);
+  }
+
+  /* 深色：暖炭 */
+  :root[data-theme="dark"][data-palette-dark="ember"] {
+    --ground: #151311;
+    --surface: #1f1c19;
+    --surface-2: #26221f;
+    --ink: #ede7e1;
+    --ink-2: #bdb3a9;
+    --ink-3: #928880;
+    --line: #332e2a;
+    --line-2: #2a2623;
+    --accent: #8fbf9a;
+    --accent-ink: #102015;
+    --accent-soft: #243328;
+    --overdue: #ef7361;
+    --overdue-soft: #3b201b;
+    --soon: #dca640;
+    --soon-soft: #342816;
+    --paused: #7b726b;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px rgba(0, 0, 0, 0.3);
     --scrim: rgba(0, 0, 0, 0.55);
   }

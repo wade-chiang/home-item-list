@@ -11,10 +11,13 @@ import Icon from "../components/Icon.tsx";
 import LoadErrorState from "../components/LoadErrorState.tsx";
 import PageHeader from "../components/PageHeader.tsx";
 import SectionDivider from "../components/SectionDivider.tsx";
+import { findPalette, type PaletteMode } from "../palettes.ts";
 import {
   readItemIconsPreference,
+  readPalettePreference,
   readThemePreference,
   saveItemIconsPreference,
+  savePalettePreference,
   saveThemePreference,
   type ThemePreference,
 } from "../preferences.ts";
@@ -29,6 +32,7 @@ import type { Category, Item, Location } from "../shared/types.ts";
 import DefaultLeadSheet from "./DefaultLeadSheet.tsx";
 import ExportBackupSheet from "./ExportBackupSheet.tsx";
 import LocationReorderList from "./LocationReorderList.tsx";
+import PaletteSheet from "./PaletteSheet.tsx";
 import { PLACE_WORD, type PlaceKind } from "./placeForm.ts";
 import PlaceSheet from "./PlaceSheet.tsx";
 import RestoreBackupSheet from "./RestoreBackupSheet.tsx";
@@ -58,10 +62,17 @@ const THEME_OPTIONS: {
   { value: "dark", label: "深色", icon: Moon },
 ];
 
-/** 原型的 themeSeg()：跟隨系統／淺色／深色。存在這支手機上（PRODUCT.md §4.6） */
-function ThemeSegment() {
-  const [theme, setTheme] = useState<ThemePreference>(readThemePreference);
-
+/**
+ * 原型的 themeSeg()：跟隨系統／淺色／深色。存在這支手機上（PRODUCT.md §4.6）。
+ * 值由設定頁保管：選配色時會一起切換主題（P2-15），這裡才不會停在舊的選取狀態
+ */
+function ThemeSegment({
+  theme,
+  onChange,
+}: {
+  theme: ThemePreference;
+  onChange: (value: ThemePreference) => void;
+}) {
   return (
     <div className="flex gap-1 rounded-xl border border-line bg-surface p-1">
       {THEME_OPTIONS.map((option) => {
@@ -73,8 +84,7 @@ function ThemeSegment() {
             type="button"
             aria-pressed={selected}
             onClick={() => {
-              setTheme(option.value);
-              saveThemePreference(option.value);
+              onChange(option.value);
             }}
             className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg py-2 text-[13.5px] ${selected ? "bg-ink font-medium text-ground" : "text-ink-2"}`}
           >
@@ -228,9 +238,59 @@ function SettingsSkeleton() {
   );
 }
 
+/** 「配色」那一列（P2-15）：顯示目前選到的名稱與小色塊，點開面板挑 */
+function PaletteRow({
+  theme,
+  selected,
+  onOpen,
+}: {
+  theme: ThemePreference;
+  selected: Record<PaletteMode, string>;
+  onOpen: () => void;
+}) {
+  // 色塊顯示哪一組：選了深色看深色，其餘看淺色。跟隨系統時實際可能是深色，但這裡不去讀系統設定，
+  // 因為兩組的名稱在旁邊都寫出來了，色塊只是輔助
+  const mode: PaletteMode = theme === "dark" ? "dark" : "light";
+  const palette = findPalette(mode, selected[mode]);
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex w-full items-center justify-between gap-4 rounded-xl border border-line bg-surface px-3.5 py-3 text-left"
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block text-[14.5px]">配色</span>
+        <span className="block text-[12px] text-ink-3">
+          淺色 {findPalette("light", selected.light).name} · 深色{" "}
+          {findPalette("dark", selected.dark).name}
+        </span>
+      </span>
+      <span className="flex shrink-0 items-center gap-1">
+        <span
+          className="flex overflow-hidden rounded-md border"
+          style={{ borderColor: palette.swatch[1] }}
+        >
+          {palette.swatch.slice(0, 3).map((color, index) => (
+            <span
+              key={`${palette.id}-${String(index)}`}
+              className="block h-5 w-3"
+              style={{ background: color }}
+            />
+          ))}
+        </span>
+        <span className="text-ink-3">
+          <ChevronRight size={16} strokeWidth={1.75} aria-hidden />
+        </span>
+      </span>
+    </button>
+  );
+}
+
 /** 面板開著時是哪一個；null 表示沒開 */
 type OpenSheet =
   | { type: "lead" }
+  | { type: "palette" }
   | { type: "place"; kind: PlaceKind; target: Place | null }
   | { type: "export" }
   | { type: "restore" }
@@ -245,6 +305,22 @@ function SettingsPage() {
   const logs = useLogs();
   const queries = [settings, locations, categories, items, logs];
   const [sheet, setSheet] = useState<OpenSheet>(null);
+  const [theme, setTheme] = useState<ThemePreference>(readThemePreference);
+  const [palettes, setPalettes] = useState<Record<PaletteMode, string>>(() => ({
+    light: readPalettePreference("light"),
+    dark: readPalettePreference("dark"),
+  }));
+
+  const changeTheme = (value: ThemePreference) => {
+    setTheme(value);
+    saveThemePreference(value);
+  };
+  const changePalette = (mode: PaletteMode, id: string) => {
+    setPalettes({ ...palettes, [mode]: id });
+    savePalettePreference(mode, id);
+    // 切到對應的主題，否則在淺色下選深色配色看不出變化（照原型）
+    changeTheme(mode);
+  };
 
   const failed = queries.find((query) => query.error !== null);
   const retry = () => {
@@ -259,10 +335,25 @@ function SettingsPage() {
       <main data-page="settings" className="flex-1 px-4 pb-44">
         {/* 外觀存在手機上，不用等資料，也不受讀取失敗影響 */}
         <SectionDivider title="外觀" />
-        <ThemeSegment />
+        <ThemeSegment theme={theme} onChange={changeTheme} />
+        <div className="mt-2">
+          <PaletteRow
+            theme={theme}
+            selected={palettes}
+            onOpen={() => setSheet({ type: "palette" })}
+          />
+        </div>
         <div className="mt-2">
           <ItemIconsSwitch />
         </div>
+        {/* 配色面板放在這裡，不放下面的資料區塊：外觀不需要資料，讀取失敗時也要能改 */}
+        {sheet?.type === "palette" && (
+          <PaletteSheet
+            selected={palettes}
+            onSelect={changePalette}
+            onClose={() => setSheet(null)}
+          />
+        )}
 
         {failed?.error ? (
           <LoadErrorState error={failed.error} onRetry={retry} />

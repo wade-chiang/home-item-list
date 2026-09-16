@@ -93,7 +93,8 @@ src/
     types.ts         領域型別（手寫維護，見「型別要自己顧」）
   pages/
   components/
-  preferences.ts     這支手機自己的偏好（外觀、物品 icon 顯示），存在 localStorage，不是資料庫的資料，所以不在 repo/
+  preferences.ts     這支手機自己的偏好（外觀、配色、物品 icon 顯示），存在 localStorage，不是資料庫的資料，所以不在 repo/
+  palettes.ts        配色清單（P2-15）。顏色定義在 index.css，這裡只有名稱、說明與預覽色塊，兩邊要一起改
   photoFile.ts       上傳前把照片縮小並轉成 JPEG（瀏覽器 canvas，不是資料存取，所以不在 repo/）
   backup/            匯出與還原備份：格式、zip、存檔（存檔在 P3 要換成 Capacitor 外掛）
 pb_migrations/       PocketBase collection 定義（**進 git**）
